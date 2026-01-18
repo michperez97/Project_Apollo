@@ -12,6 +12,8 @@ This file tracks notable changes to the project. Add new entries under
 - Course page UI for modules, assignments, submissions, grading, and uploads.
 - Cloudinary upload signing on the backend plus frontend upload helper.
 - Seed script for sample users, course content, and submissions.
+- Stripe payments API (PaymentIntents, webhooks, transactions, enrollment payment status).
+- Stripe Elements payment form on the student dashboard.
 
 ### Changed
 - Backend dev port to 5001 in templates and README.
@@ -20,3 +22,5 @@ This file tracks notable changes to the project. Add new entries under
 - Alignment migrations to reconcile module, assignment, and submission schemas.
 - JWT token handling types and delete helpers to satisfy TypeScript strictness.
 - README seed docs and seed env overrides.
+- Env examples refreshed for Stripe and seed defaults.
+- README updates for Stripe payments and Phase 3 status.

@@ -1,9 +1,11 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Course, Enrollment } from '../types';
+import { Course, Enrollment, PaymentIntentSession } from '../types';
 import * as courseApi from '../services/courses';
 import * as enrollmentApi from '../services/enrollments';
+import * as paymentApi from '../services/payments';
 
 const defaultCourseForm = {
   code: '',
@@ -18,6 +20,9 @@ const defaultCourseForm = {
 
 const DashboardPage = () => {
   const { user, logout } = useAuth();
+  const stripe = useStripe();
+  const elements = useElements();
+  const stripeEnabled = Boolean(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +32,22 @@ const DashboardPage = () => {
   const [enrolling, setEnrolling] = useState(false);
   const [enrollCourseId, setEnrollCourseId] = useState<number | ''>('');
   const [enrollStudentId, setEnrollStudentId] = useState<number | ''>('');
+  const [payingEnrollmentId, setPayingEnrollmentId] = useState<number | null>(null);
+  const [paymentSession, setPaymentSession] = useState<PaymentIntentSession | null>(null);
+  const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentBusy, setPaymentBusy] = useState(false);
+
+  const paymentStatusClass = (status: Enrollment['payment_status']) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-green-100 text-green-800';
+      case 'partial':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-yellow-100 text-yellow-800';
+    }
+  };
 
   const canManageCourses = useMemo(
     () => user?.role === 'admin' || user?.role === 'teacher',
@@ -121,6 +142,77 @@ const DashboardPage = () => {
     }
   };
 
+  const beginPayment = async (enrollmentId: number) => {
+    if (paymentBusy) return;
+    if (!stripeEnabled) {
+      setPaymentError('Stripe is not configured.');
+      return;
+    }
+    setPaymentError(null);
+    setPaymentMessage(null);
+    setPayingEnrollmentId(enrollmentId);
+    setPaymentSession(null);
+    setPaymentBusy(true);
+    try {
+      const session = await paymentApi.createPaymentIntent(enrollmentId);
+      setPaymentSession(session);
+    } catch (err) {
+      console.error(err);
+      setPaymentError('Could not start payment. Try again later.');
+      setPayingEnrollmentId(null);
+    } finally {
+      setPaymentBusy(false);
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!stripeEnabled) {
+      setPaymentError('Stripe is not configured.');
+      return;
+    }
+    if (!stripe || !elements) {
+      setPaymentError('Payment form is not ready.');
+      return;
+    }
+    if (!paymentSession) {
+      setPaymentError('No payment session. Start again.');
+      return;
+    }
+
+    const card = elements.getElement(CardElement);
+    if (!card) {
+      setPaymentError('Enter your card details.');
+      return;
+    }
+
+    setPaymentBusy(true);
+    setPaymentError(null);
+    setPaymentMessage(null);
+
+    const result = await stripe.confirmCardPayment(paymentSession.clientSecret, {
+      payment_method: { card }
+    });
+
+    if (result.error) {
+      setPaymentError(result.error.message ?? 'Payment failed');
+    } else if (result.paymentIntent?.status === 'succeeded') {
+      setPaymentMessage('Payment succeeded! Status will update shortly.');
+      if (payingEnrollmentId) {
+        setEnrollments((prev) =>
+          prev.map((enrollment) =>
+            enrollment.id === payingEnrollmentId
+              ? { ...enrollment, payment_status: 'paid' }
+              : enrollment
+          )
+        );
+      }
+      setPaymentSession(null);
+      setPayingEnrollmentId(null);
+    }
+
+    setPaymentBusy(false);
+  };
+
   if (!user) return null;
 
   return (
@@ -141,6 +233,12 @@ const DashboardPage = () => {
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {error && <div className="p-3 rounded-md bg-red-50 text-red-700">{error}</div>}
+        {paymentError && (
+          <div className="p-3 rounded-md bg-red-50 text-red-700">{paymentError}</div>
+        )}
+        {paymentMessage && (
+          <div className="p-3 rounded-md bg-green-50 text-green-700">{paymentMessage}</div>
+        )}
         {loading ? (
           <div className="card text-center">Loading dashboard...</div>
         ) : (
@@ -203,9 +301,63 @@ const DashboardPage = () => {
                         <p className="text-sm text-gray-600">
                           Student #{enrollment.student_id} · Tuition ${enrollment.tuition_amount}
                         </p>
-                        <p className="text-xs text-gray-500">
-                          Status: {enrollment.payment_status} · {new Date(enrollment.enrolled_at).toLocaleString()}
-                        </p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <span>Status:</span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${paymentStatusClass(enrollment.payment_status)}`}
+                          >
+                            {enrollment.payment_status}
+                          </span>
+                          <span className="text-gray-400">
+                            · {new Date(enrollment.enrolled_at).toLocaleString()}
+                          </span>
+                        </div>
+                        {user.role === 'student' && (
+                          <div className="mt-2 space-y-2">
+                            {enrollment.payment_status !== 'paid' ? (
+                              stripeEnabled ? (
+                                <button
+                                  className="btn-primary text-sm"
+                                  onClick={() => beginPayment(enrollment.id)}
+                                  disabled={paymentBusy && payingEnrollmentId === enrollment.id}
+                                >
+                                  {paymentBusy && payingEnrollmentId === enrollment.id
+                                    ? 'Starting payment...'
+                                    : 'Pay tuition'}
+                                </button>
+                              ) : (
+                                <p className="text-xs text-gray-500">
+                                  Payments are disabled. Set VITE_STRIPE_PUBLISHABLE_KEY.
+                                </p>
+                              )
+                            ) : (
+                              <p className="text-xs text-green-600">Tuition paid</p>
+                            )}
+
+                            {stripeEnabled && payingEnrollmentId === enrollment.id && paymentBusy && !paymentSession && (
+                              <p className="text-xs text-gray-600">Preparing payment form...</p>
+                            )}
+
+                            {stripeEnabled && payingEnrollmentId === enrollment.id && paymentSession && (
+                              <div className="border border-gray-200 rounded-lg p-3 space-y-2 bg-white">
+                                <p className="text-sm font-medium">
+                                  Pay {(paymentSession.amountCents / 100).toFixed(2)}{' '}
+                                  {paymentSession.currency.toUpperCase()}
+                                </p>
+                                <div className="rounded border border-gray-300 p-2 bg-white">
+                                  <CardElement />
+                                </div>
+                                <button
+                                  className="btn-primary w-full"
+                                  onClick={handleConfirmPayment}
+                                  disabled={paymentBusy}
+                                >
+                                  {paymentBusy ? 'Processing...' : 'Confirm payment'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -9,6 +9,8 @@ export interface EnrollmentRecord {
   enrolled_at: Date;
 }
 
+export type EnrollmentPaymentStatus = 'pending' | 'paid' | 'partial';
+
 export interface EnrollmentInput {
   student_id: number;
   course_id: number;
@@ -40,6 +42,29 @@ export const listEnrollmentsByStudent = async (studentId: number): Promise<Enrol
     [studentId]
   );
   return result.rows;
+};
+
+export const getEnrollmentById = async (id: number): Promise<EnrollmentRecord | null> => {
+  const result = await pool.query<EnrollmentRecord>(
+    `SELECT * FROM enrollments WHERE id = $1 LIMIT 1`,
+    [id]
+  );
+  return result.rows[0] ?? null;
+};
+
+export const updateEnrollmentPaymentStatus = async (
+  id: number,
+  payment_status: EnrollmentPaymentStatus
+): Promise<EnrollmentRecord | null> => {
+  const result = await pool.query<EnrollmentRecord>(
+    `UPDATE enrollments
+     SET payment_status = $1
+     WHERE id = $2
+     RETURNING *`,
+    [payment_status, id]
+  );
+
+  return result.rows[0] ?? null;
 };
 
 

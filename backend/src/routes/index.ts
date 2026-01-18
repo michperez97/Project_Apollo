@@ -5,6 +5,7 @@ import enrollmentRoutes from './enrollmentRoutes';
 import moduleRoutes from './moduleRoutes';
 import assignmentRoutes from './assignmentRoutes';
 import uploadRoutes from './uploadRoutes';
+import paymentRoutes from './paymentRoutes';
 
 const router = Router();
 
@@ -14,6 +15,7 @@ router.use('/enrollments', enrollmentRoutes);
 router.use('/', moduleRoutes);
 router.use('/', assignmentRoutes);
 router.use('/', uploadRoutes);
+router.use('/payments', paymentRoutes);
 
 export default router;
 

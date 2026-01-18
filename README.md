@@ -94,6 +94,15 @@ npm run dev
 - Backend API: http://localhost:5001
 - Health check: http://localhost:5001/health
 
+### Stripe payments (development)
+1. Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_CURRENCY` in `backend/.env`. Add `VITE_STRIPE_PUBLISHABLE_KEY` to `frontend/.env`.
+   - Use test keys from the same Stripe account and restart dev servers after updates.
+2. Run the Stripe CLI webhook forwarder:
+   ```bash
+   stripe listen --forward-to http://localhost:5001/api/payments/webhook
+   ```
+3. Sign in as a student and use the Dashboard “Pay tuition” button. The backend creates a PaymentIntent from the enrollment tuition and webhook updates payment status.
+
 ## Development
 
 ### Backend Commands
@@ -121,6 +130,10 @@ npm run preview       # Preview production build
 - Assignments: teachers/admins create; students submit URL/text or uploaded file.
 - Grading: staff grades submissions; students see grades/feedback; gradebook CSV available.
 - Uploads: backend issues Cloudinary signatures at `/uploads/sign`; frontend uploads directly then stores the returned URL.
+
+## Financial Management Overview (Phase 3)
+- Stripe payments: students can pay tuition from enrollments; backend creates PaymentIntents and records transactions.
+- Webhooks: Stripe events update transaction status and enrollment payment state.
 
 ## Database Migrations
 
@@ -162,6 +175,7 @@ Override options for `npm run seed`:
 - `JWT_EXPIRES_IN` - JWT expiration (e.g., `7d`)
 - `STRIPE_SECRET_KEY` - Stripe secret key
 - `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret
+- `STRIPE_CURRENCY` - Currency code for payments (e.g., `usd`)
 - `FRONTEND_URL` - Frontend URL for CORS
 - `CLOUDINARY_CLOUD_NAME` - Cloudinary cloud name
 - `CLOUDINARY_API_KEY` - Cloudinary API key
@@ -192,10 +206,10 @@ Override options for `npm run seed`:
 - [x] Gradebook with CSV export
 
 ### Phase 3: Financial Management
-- [ ] Stripe payment integration
+- [x] Stripe payment integration
 - [ ] Balance tracking
 - [ ] Transaction history
-- [ ] Webhook handling
+- [x] Webhook handling
 - [ ] Admin financial dashboard
 
 ### Phase 4: Communication & Polish

@@ -1,15 +1,26 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import App from './App';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
+
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        {stripePromise ? (
+          <Elements stripe={stripePromise}>
+            <App />
+          </Elements>
+        ) : (
+          <App />
+        )}
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

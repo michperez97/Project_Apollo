@@ -36,6 +36,28 @@ export interface Enrollment {
   enrolled_at: string;
 }
 
+export type TransactionStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+export type TransactionType = 'payment' | 'refund' | 'adjustment';
+
+export interface Transaction {
+  id: number;
+  student_id: number;
+  amount: number;
+  type: TransactionType;
+  stripe_payment_id: string | null;
+  status: TransactionStatus;
+  description: string | null;
+  created_at: string;
+}
+
+export interface PaymentIntentSession {
+  clientSecret: string;
+  paymentIntentId: string;
+  amountCents: number;
+  currency: string;
+  transaction: Transaction;
+}
+
 export type ModuleItemType = 'text' | 'link' | 'file';
 
 export interface ModuleItem {
