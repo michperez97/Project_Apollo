@@ -9,3 +9,4 @@ router.post('/', authenticate, authorizeRoles('admin', 'teacher', 'student'), en
 
 export default router;
 
+

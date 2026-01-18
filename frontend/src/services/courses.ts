@@ -6,6 +6,11 @@ export const getCourses = async (): Promise<Course[]> => {
   return data.courses;
 };
 
+export const getCourse = async (id: number): Promise<Course> => {
+  const { data } = await api.get<{ course: Course }>(`/courses/${id}`);
+  return data.course;
+};
+
 export const createCourse = async (payload: Omit<Course, 'id'>): Promise<Course> => {
   const { data } = await api.post<{ course: Course }>('/courses', payload);
   return data.course;

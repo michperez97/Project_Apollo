@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Course, Enrollment } from '../types';
 import * as courseApi from '../services/courses';
@@ -165,14 +166,22 @@ const DashboardPage = () => {
                           <p className="text-sm text-gray-700 mt-1">{course.description}</p>
                         )}
                       </div>
-                      {canManageCourses && (
-                        <button
-                          className="text-sm text-red-600 hover:text-red-700"
-                          onClick={() => handleDeleteCourse(course.id)}
+                      <div className="flex flex-col items-end gap-2">
+                        <Link
+                          className="text-sm text-primary-600 hover:text-primary-700"
+                          to={`/courses/${course.id}`}
                         >
-                          Delete
-                        </button>
-                      )}
+                          View
+                        </Link>
+                        {canManageCourses && (
+                          <button
+                            className="text-sm text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteCourse(course.id)}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                   {!courses.length && (

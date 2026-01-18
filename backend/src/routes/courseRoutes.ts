@@ -18,3 +18,4 @@ router.delete('/:id', authenticate, authorizeRoles('admin'), deleteCourseHandler
 
 export default router;
 
+

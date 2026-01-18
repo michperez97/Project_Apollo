@@ -108,3 +108,4 @@ export const deleteCourse = async (id: number): Promise<boolean> => {
   return result.rowCount > 0;
 };
 
+

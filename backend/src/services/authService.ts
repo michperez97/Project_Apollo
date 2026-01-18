@@ -44,3 +44,4 @@ export const verifyToken = (token: string): AuthPayload => {
   return jwt.verify(token, JWT_SECRET) as AuthPayload;
 };
 
+

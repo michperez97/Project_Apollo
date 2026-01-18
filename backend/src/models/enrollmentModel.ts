@@ -42,3 +42,4 @@ export const listEnrollmentsByStudent = async (studentId: number): Promise<Enrol
   return result.rows;
 };
 
+
