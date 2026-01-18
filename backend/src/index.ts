@@ -1,7 +1,8 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import routes from './routes';
 
 // Load environment variables
 dotenv.config();
@@ -27,13 +28,8 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// API routes will be mounted here
-app.get('/api', (req: Request, res: Response) => {
-  res.json({
-    message: 'Welcome to Project Apollo API',
-    version: '1.0.0'
-  });
-});
+// API routes
+app.use('/api', routes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
@@ -41,7 +37,7 @@ app.use((req: Request, res: Response) => {
 });
 
 // Global error handler
-app.use((err: Error, req: Request, res: Response, next: any) => {
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   console.error(err.stack);
   res.status(500).json({
     error: 'Internal server error',
