@@ -67,7 +67,7 @@ export const updateAssignment = async (
 
 export const deleteAssignment = async (id: number): Promise<boolean> => {
   const result = await pool.query('DELETE FROM assignments WHERE id = $1', [id]);
-  return result.rowCount > 0;
+  return (result.rowCount ?? 0) > 0;
 };
 
 export const listSubmissions = async (
@@ -165,4 +165,3 @@ export const listGradeAverages = async (
   );
   return result.rows;
 };
-

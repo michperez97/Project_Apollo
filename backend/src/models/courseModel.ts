@@ -105,7 +105,6 @@ export const updateCourse = async (id: number, data: Partial<CourseInput>): Prom
 
 export const deleteCourse = async (id: number): Promise<boolean> => {
   const result = await pool.query('DELETE FROM courses WHERE id = $1', [id]);
-  return result.rowCount > 0;
+  return (result.rowCount ?? 0) > 0;
 };
-
 

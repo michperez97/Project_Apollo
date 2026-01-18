@@ -1,14 +1,15 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 import { createUser, findUserByEmail, toPublicUser } from '../models/userModel';
 import { CreateUserInput, SafeUser } from '../types/user';
 import { AuthPayload, AuthResponse } from '../types/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET: Secret = process.env.JWT_SECRET || 'dev_secret_key';
+const JWT_EXPIRES_IN: SignOptions['expiresIn'] = (process.env.JWT_EXPIRES_IN ||
+  '7d') as SignOptions['expiresIn'];
 
 const generateToken = (payload: AuthPayload): string =>
-  jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as SignOptions);
 
 export const registerUser = async (data: CreateUserInput): Promise<AuthResponse> => {
   const existing = await findUserByEmail(data.email);
@@ -41,7 +42,14 @@ export const loginUser = async (email: string, password: string): Promise<AuthRe
 };
 
 export const verifyToken = (token: string): AuthPayload => {
-  return jwt.verify(token, JWT_SECRET) as AuthPayload;
+  const decoded = jwt.verify(token, JWT_SECRET);
+  if (!decoded || typeof decoded === 'string') {
+    throw new Error('Invalid token');
+  }
+
+  return {
+    sub: Number(decoded.sub),
+    email: String(decoded.email),
+    role: decoded.role as AuthPayload['role']
+  };
 };
-
-

@@ -97,7 +97,7 @@ export const updateModule = async (
 
 export const deleteModule = async (id: number): Promise<boolean> => {
   const result = await pool.query('DELETE FROM modules WHERE id = $1', [id]);
-  return result.rowCount > 0;
+  return (result.rowCount ?? 0) > 0;
 };
 
 export const createModuleItem = async (
@@ -148,7 +148,6 @@ export const updateModuleItem = async (
 
 export const deleteModuleItem = async (id: number): Promise<boolean> => {
   const result = await pool.query('DELETE FROM module_items WHERE id = $1', [id]);
-  return result.rowCount > 0;
+  return (result.rowCount ?? 0) > 0;
 };
-
 

@@ -105,6 +105,7 @@ npm run start         # Start production server
 npm run migrate:up    # Run database migrations
 npm run migrate:down  # Rollback last migration
 npm run migrate:create <name>  # Create new migration
+npm run seed          # Seed sample data
 ```
 
 ### Frontend Commands
@@ -131,6 +132,26 @@ cd backend
 npm run migrate:create add_new_feature
 ```
 
+## Seeding (Optional)
+
+Seed sample users, course content, and submissions:
+```bash
+cd backend
+npm run seed
+```
+
+Defaults (override via env if needed):
+- Admin: `admin@apollo.local`
+- Teacher: `teacher@apollo.local`
+- Student: `student@apollo.local`
+- Password: `Password123!`
+
+Override options for `npm run seed`:
+- `SEED_ADMIN_EMAIL`
+- `SEED_TEACHER_EMAIL`
+- `SEED_STUDENT_EMAIL`
+- `SEED_PASSWORD`
+
 ## Environment Variables
 
 ### Backend (.env)
@@ -145,6 +166,10 @@ npm run migrate:create add_new_feature
 - `CLOUDINARY_CLOUD_NAME` - Cloudinary cloud name
 - `CLOUDINARY_API_KEY` - Cloudinary API key
 - `CLOUDINARY_API_SECRET` - Cloudinary API secret
+- `SEED_ADMIN_EMAIL` - Optional seed email for the admin user
+- `SEED_TEACHER_EMAIL` - Optional seed email for the teacher user
+- `SEED_STUDENT_EMAIL` - Optional seed email for the student user
+- `SEED_PASSWORD` - Optional seed password for all seeded users
 
 ### Frontend (.env)
 - `VITE_API_URL` - Backend API URL

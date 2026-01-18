@@ -10,7 +10,7 @@
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
     "migrate:create": "node-pg-migrate create",
-    "seed": "ts-node seeds/index.ts"
+    "seed": "ts-node src/scripts/seed.ts"
   },
   "keywords": [],
   "author": "",

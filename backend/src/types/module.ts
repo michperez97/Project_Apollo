@@ -41,6 +41,7 @@ export interface CreateModuleItemInput {
   content_text?: string | null;
 }
 
-export interface UpdateModuleItemInput extends Partial<CreateModuleItemInput> {}
-
+export interface UpdateModuleItemInput extends Partial<CreateModuleItemInput> {
+  position?: number;
+}
 

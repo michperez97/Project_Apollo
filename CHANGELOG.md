@@ -11,9 +11,12 @@ This file tracks notable changes to the project. Add new entries under
 - Learning management APIs (modules, assignments, submissions, grading, gradebook CSV).
 - Course page UI for modules, assignments, submissions, grading, and uploads.
 - Cloudinary upload signing on the backend plus frontend upload helper.
+- Seed script for sample users, course content, and submissions.
 
 ### Changed
 - Backend dev port to 5001 in templates and README.
 - Frontend health check to call the root `/health` endpoint.
 - Backend status UI copy to English.
 - Alignment migrations to reconcile module, assignment, and submission schemas.
+- JWT token handling types and delete helpers to satisfy TypeScript strictness.
+- README seed docs and seed env overrides.
