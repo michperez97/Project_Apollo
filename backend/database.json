@@ -1,0 +1,20 @@
+{
+  "defaultEnv": "development",
+  "development": {
+    "driver": "pg",
+    "connectionString": {
+      "ENV": "DATABASE_URL"
+    },
+    "migrations-dir": "migrations",
+    "migrations-table": "pgmigrations"
+  },
+  "production": {
+    "driver": "pg",
+    "connectionString": {
+      "ENV": "DATABASE_URL"
+    },
+    "migrations-dir": "migrations",
+    "migrations-table": "pgmigrations",
+    "ssl": true
+  }
+}
