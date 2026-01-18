@@ -143,10 +143,10 @@ npm run migrate:create add_new_feature
 
 ### Phase 1: Core Platform
 - [x] Project setup with monorepo structure
-- [ ] User authentication (JWT)
-- [ ] Role-based access control (Admin, Teacher, Student)
-- [ ] Course management
-- [ ] Student enrollment with automatic tuition calculation
+- [x] User authentication (JWT)
+- [x] Role-based access control (Admin, Teacher, Student)
+- [x] Course management
+- [x] Student enrollment with automatic tuition calculation
 
 ### Phase 2: Learning Management
 - [ ] Module and content organization
