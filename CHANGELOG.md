@@ -24,3 +24,4 @@ This file tracks notable changes to the project. Add new entries under
 - README seed docs and seed env overrides.
 - Env examples refreshed for Stripe and seed defaults.
 - README updates for Stripe payments and Phase 3 status.
+- README team onboarding quick start.

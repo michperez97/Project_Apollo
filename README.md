@@ -94,6 +94,35 @@ npm run dev
 - Backend API: http://localhost:5001
 - Health check: http://localhost:5001/health
 
+## Team Onboarding (Quick Start)
+1. Clone and install:
+   ```bash
+   git clone <repository-url>
+   cd Project_Apollo
+   npm install
+   npm run install:all
+   ```
+2. Configure env files:
+   ```bash
+   cp backend/.env.example backend/.env
+   cp frontend/.env.example frontend/.env
+   ```
+   - Set `DATABASE_URL`, `JWT_SECRET`, and `FRONTEND_URL` at minimum.
+   - Add Cloudinary keys to enable uploads.
+   - Add Stripe test keys to enable payments.
+3. Initialize the database:
+   ```bash
+   createdb project_apollo
+   cd backend
+   npm run migrate:up
+   npm run seed
+   ```
+4. Run:
+   ```bash
+   cd ..
+   npm run dev
+   ```
+
 ### Stripe payments (development)
 1. Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_CURRENCY` in `backend/.env`. Add `VITE_STRIPE_PUBLISHABLE_KEY` to `frontend/.env`.
    - Use test keys from the same Stripe account and restart dev servers after updates.
