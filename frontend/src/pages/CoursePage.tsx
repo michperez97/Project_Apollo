@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Assignment, Course, Module, ModuleItemType, Submission } from '../types';
+import { Assignment, Course, Module, ModuleItemType, Submission, Announcement } from '../types';
 import * as courseApi from '../services/courses';
 import * as moduleApi from '../services/modules';
 import * as assignmentApi from '../services/assignments';
+import * as announcementApi from '../services/announcements';
 import { uploadFile } from '../services/uploads';
 import { api } from '../services/http';
+import { LoadingCard, Spinner } from '../components/LoadingStates';
+import { Alert, EmptyState } from '../components/Alerts';
 
 type ItemDraft = {
   title: string;
@@ -30,12 +33,15 @@ const CoursePage = () => {
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [moduleTitle, setModuleTitle] = useState('');
   const [itemDrafts, setItemDrafts] = useState<Record<number, ItemDraft>>({});
   const [savingModule, setSavingModule] = useState(false);
   const [savingItem, setSavingItem] = useState<Record<number, boolean>>({});
+  const [announcementForm, setAnnouncementForm] = useState({ title: '', message: '' });
+  const [savingAnnouncement, setSavingAnnouncement] = useState(false);
   const [assignmentForm, setAssignmentForm] = useState({
     title: '',
     description: '',
@@ -67,14 +73,16 @@ const CoursePage = () => {
       setLoading(true);
       setError(null);
       try {
-        const [courseData, modulesData, assignmentsData] = await Promise.all([
+        const [courseData, modulesData, assignmentsData, announcementsData] = await Promise.all([
           courseApi.getCourse(id),
           moduleApi.getModules(id),
-          assignmentApi.getAssignments(id)
+          assignmentApi.getAssignments(id),
+          announcementApi.getAnnouncements(id)
         ]);
         setCourse(courseData);
         setModules(modulesData);
         setAssignments(assignmentsData);
+        setAnnouncements(announcementsData);
         if (user) {
           const subsEntries = await Promise.all(
             assignmentsData.map(async (a) => {
@@ -213,6 +221,36 @@ const CoursePage = () => {
     }
   };
 
+  const handleCreateAnnouncement = async () => {
+    if (!announcementForm.title.trim() || !announcementForm.message.trim()) return;
+    setSavingAnnouncement(true);
+    setError(null);
+    try {
+      const announcement = await announcementApi.createAnnouncement({
+        course_id: id,
+        title: announcementForm.title,
+        message: announcementForm.message
+      });
+      setAnnouncements((prev) => [announcement, ...prev]);
+      setAnnouncementForm({ title: '', message: '' });
+    } catch (err) {
+      console.error(err);
+      setError('Could not create announcement.');
+    } finally {
+      setSavingAnnouncement(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (announcementId: number) => {
+    try {
+      await announcementApi.deleteAnnouncement(announcementId);
+      setAnnouncements((prev) => prev.filter((a) => a.id !== announcementId));
+    } catch (err) {
+      console.error(err);
+      setError('Could not delete announcement.');
+    }
+  };
+
   const handleSubmitAssignment = async (assignmentId: number) => {
     const draft = submissionDrafts[assignmentId] ?? { content_url: '', content_text: '' };
     if (!draft.content_url && !draft.content_text) {
@@ -316,17 +354,18 @@ const CoursePage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Loading course...</p>
-      </div>
-    );
+    return <LoadingCard message="Loading course..." />;
   }
 
   if (!course) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-600">Course not found.</p>
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <EmptyState
+          icon="❌"
+          title="Course not found"
+          description="The course you're looking for doesn't exist or has been removed"
+          action={<Link to="/" className="btn-primary">Back to Dashboard</Link>}
+        />
       </div>
     );
   }
@@ -334,55 +373,68 @@ const CoursePage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-500">
-              <Link to="/" className="text-primary-600 hover:text-primary-700">
-                Dashboard
-              </Link>{' '}
-              / Course
-            </p>
-            <h1 className="text-2xl font-semibold">
-              {course.code} — {course.name}
-            </h1>
-            <p className="text-sm text-gray-600">
-              {course.semester} {course.year} · {course.credit_hours} credits
-            </p>
-          </div>
+        <div className="max-w-5xl mx-auto px-4 py-4">
+          <p className="text-xs sm:text-sm text-gray-500 mb-1">
+            <Link to="/" className="text-primary-600 hover:text-primary-700">
+              Dashboard
+            </Link>{' '}
+            / Course
+          </p>
+          <h1 className="text-xl sm:text-2xl font-semibold break-words">
+            {course.code} — {course.name}
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-600">
+            {course.semester} {course.year} · {course.credit_hours} credits
+          </p>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        {error && <div className="p-3 bg-red-50 text-red-700 rounded-md">{error}</div>}
+      <main className="max-w-5xl mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
 
         {canManage && (
           <section className="card space-y-3">
             <h2 className="text-lg font-semibold">Add Module</h2>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <input
                 className="input flex-1"
                 placeholder="Module title"
                 value={moduleTitle}
                 onChange={(e) => setModuleTitle(e.target.value)}
               />
-              <button className="btn-primary" onClick={handleCreateModule} disabled={savingModule}>
-                {savingModule ? 'Saving...' : 'Add'}
+              <button className="btn-primary w-full sm:w-auto" onClick={handleCreateModule} disabled={savingModule}>
+                {savingModule ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  'Add Module'
+                )}
               </button>
             </div>
           </section>
         )}
 
         <section className="space-y-4">
+          {!modules.length && (
+            <EmptyState
+              icon="📦"
+              title="No modules yet"
+              description={canManage ? "Add your first module to organize course content" : "No content available"}
+            />
+          )}
+          
           {modules.map((mod) => (
             <div key={mod.id} className="card space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold">{mod.title}</h3>
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold break-words">{mod.title}</h3>
                   <p className="text-sm text-gray-500">Module #{mod.position}</p>
                 </div>
                 {canManage && (
                   <button
-                    className="text-sm text-red-600 hover:text-red-700"
+                    className="text-sm text-red-600 hover:text-red-700 whitespace-nowrap w-full sm:w-auto"
                     onClick={() => handleDeleteModule(mod.id)}
                   >
                     Delete
@@ -394,7 +446,7 @@ const CoursePage = () => {
                 {mod.items.map((item) => (
                   <div
                     key={item.id}
-                    className="border border-gray-200 rounded-lg p-3 flex items-start justify-between gap-3"
+                    className="border border-gray-200 rounded-lg p-3 flex flex-col sm:flex-row items-start justify-between gap-3"
                   >
                     <div>
                       <p className="font-medium">{item.title}</p>
@@ -742,6 +794,76 @@ const CoursePage = () => {
               );
             })}
             {!assignments.length && <p className="text-sm text-gray-600">No assignments yet.</p>}
+          </div>
+        </section>
+
+        <section className="card space-y-4">
+          <h2 className="text-lg font-semibold">Announcements</h2>
+
+          {canManage && (
+            <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50">
+              <h3 className="font-medium">Create Announcement</h3>
+              <input
+                className="input"
+                placeholder="Title"
+                value={announcementForm.title}
+                onChange={(e) => setAnnouncementForm((p) => ({ ...p, title: e.target.value }))}
+              />
+              <textarea
+                className="input min-h-[100px]"
+                placeholder="Message"
+                value={announcementForm.message}
+                onChange={(e) => setAnnouncementForm((p) => ({ ...p, message: e.target.value }))}
+              />
+              <button
+                className="btn-primary"
+                onClick={handleCreateAnnouncement}
+                disabled={savingAnnouncement}
+              >
+                {savingAnnouncement ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Posting...
+                  </>
+                ) : (
+                  'Post Announcement'
+                )}
+              </button>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {announcements.map((announcement) => (
+              <div
+                key={announcement.id}
+                className="border border-gray-200 rounded-lg p-4"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-gray-900">{announcement.title}</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">
+                      {new Date(announcement.created_at).toLocaleDateString()}
+                    </span>
+                    {canManage && (
+                      <button
+                        className="text-sm text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteAnnouncement(announcement.id)}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{announcement.message}</p>
+              </div>
+            ))}
+            {!announcements.length && (
+              <EmptyState
+                icon="📢"
+                title="No announcements yet"
+                description={canManage ? "Post your first announcement to communicate with students" : "No announcements have been posted"}
+              />
+            )}
           </div>
         </section>
       </main>

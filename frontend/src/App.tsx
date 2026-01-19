@@ -4,6 +4,7 @@ import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CoursePage from './pages/CoursePage';
+import AdminFinancialDashboard from './pages/AdminFinancialDashboard';
 
 const App = () => {
   return (
@@ -23,6 +24,14 @@ const App = () => {
         element={
           <ProtectedRoute>
             <CoursePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/finance"
+        element={
+          <ProtectedRoute>
+            <AdminFinancialDashboard />
           </ProtectedRoute>
         }
       />

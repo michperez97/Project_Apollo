@@ -106,3 +106,40 @@ export interface Submission {
   feedback?: string | null;
 }
 
+export interface StudentBalance {
+  student_id: number;
+  total_tuition: number;
+  total_paid: number;
+  total_refunded: number;
+  balance: number;
+  currency: string;
+}
+
+export interface FinancialSummary {
+  total_revenue: number;
+  outstanding_balance: number;
+  total_refunded: number;
+  students_with_balance: number;
+  students_paid: number;
+  students_partial: number;
+  students_pending: number;
+  currency: string;
+}
+
+export interface StudentBalanceDetail extends StudentBalance {
+  student_email: string;
+  student_first_name: string;
+  student_last_name: string;
+  enrollment_count: number;
+}
+
+export interface Announcement {
+  id: number;
+  course_id: number;
+  teacher_id: number;
+  title: string;
+  message: string;
+  created_at: string;
+  updated_at: string;
+}
+

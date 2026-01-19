@@ -2,10 +2,13 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Course, Enrollment, PaymentIntentSession } from '../types';
+import { Course, Enrollment, PaymentIntentSession, StudentBalance, Transaction, Announcement } from '../types';
 import * as courseApi from '../services/courses';
 import * as enrollmentApi from '../services/enrollments';
 import * as paymentApi from '../services/payments';
+import * as announcementApi from '../services/announcements';
+import { LoadingCard } from '../components/LoadingStates';
+import { Alert, EmptyState } from '../components/Alerts';
 
 const defaultCourseForm = {
   code: '',
@@ -25,6 +28,9 @@ const DashboardPage = () => {
   const stripeEnabled = Boolean(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [balance, setBalance] = useState<StudentBalance | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [courseForm, setCourseForm] = useState(defaultCourseForm);
@@ -61,12 +67,26 @@ const DashboardPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const [courseData, enrollmentData] = await Promise.all([
+        const promises: Promise<unknown>[] = [
           courseApi.getCourses(),
-          enrollmentApi.getEnrollments(user.role === 'student' ? user.id : undefined)
-        ]);
-        setCourses(courseData);
-        setEnrollments(enrollmentData);
+          enrollmentApi.getEnrollments(user.role === 'student' ? user.id : undefined),
+          announcementApi.getAnnouncements()
+        ];
+
+        if (user.role === 'student') {
+          promises.push(paymentApi.getBalance());
+          promises.push(paymentApi.getTransactions());
+        }
+
+        const results = await Promise.all(promises);
+        setCourses(results[0] as Course[]);
+        setEnrollments(results[1] as Enrollment[]);
+        setAnnouncements(results[2] as Announcement[]);
+
+        if (user.role === 'student') {
+          setBalance(results[3] as StudentBalance);
+          setTransactions(results[4] as Transaction[]);
+        }
       } catch (err) {
         console.error(err);
         setError('Failed to load dashboard data.');
@@ -218,62 +238,68 @@ const DashboardPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">Project Apollo</h1>
-            <p className="text-sm text-gray-600">
-              Signed in as {user.first_name} {user.last_name} · {user.role}
-            </p>
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-start justify-between gap-3 mb-3 sm:mb-0">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-semibold truncate">Project Apollo</h1>
+              <p className="text-xs sm:text-sm text-gray-600 truncate">
+                {user.first_name} {user.last_name} · {user.role}
+              </p>
+            </div>
+            <button className="btn-secondary text-sm sm:text-base whitespace-nowrap" onClick={logout}>
+              Sign out
+            </button>
           </div>
-          <button className="btn-secondary" onClick={logout}>
-            Sign out
-          </button>
+          {user.role === 'admin' && (
+            <Link className="btn-secondary w-full sm:w-auto text-sm sm:text-base mt-2" to="/admin/finance">
+              Financial Dashboard
+            </Link>
+          )}
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {error && <div className="p-3 rounded-md bg-red-50 text-red-700">{error}</div>}
-        {paymentError && (
-          <div className="p-3 rounded-md bg-red-50 text-red-700">{paymentError}</div>
-        )}
-        {paymentMessage && (
-          <div className="p-3 rounded-md bg-green-50 text-green-700">{paymentMessage}</div>
-        )}
+      <main className="max-w-6xl mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
+        {paymentError && <Alert type="error" message={paymentError} onClose={() => setPaymentError(null)} />}
+        {paymentMessage && <Alert type="success" message={paymentMessage} onClose={() => setPaymentMessage(null)} />}
+        
         {loading ? (
-          <div className="card text-center">Loading dashboard...</div>
+          <LoadingCard message="Loading dashboard..." />
         ) : (
           <>
-            <section className="grid md:grid-cols-2 gap-4">
+            <section className="grid sm:grid-cols-2 gap-4">
               <div className="card">
                 <h2 className="text-lg font-semibold mb-3">Courses</h2>
                 <div className="space-y-3 max-h-96 overflow-auto pr-1">
                   {courses.map((course) => (
                     <div
                       key={course.id}
-                      className="border border-gray-200 rounded-lg p-3 flex items-start justify-between gap-3"
+                      className="border border-gray-200 rounded-lg p-3 flex flex-col sm:flex-row items-start justify-between gap-3"
                     >
-                      <div>
-                        <p className="font-semibold">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold break-words">
                           {course.code} — {course.name}
                         </p>
                         <p className="text-sm text-gray-600">
-                          {course.credit_hours} credits @ ${course.price_per_credit}/credit ·{' '}
+                          {course.credit_hours} credits @ ${course.price_per_credit}/credit
+                        </p>
+                        <p className="text-sm text-gray-600">
                           {course.semester} {course.year}
                         </p>
                         {course.description && (
-                          <p className="text-sm text-gray-700 mt-1">{course.description}</p>
+                          <p className="text-sm text-gray-700 mt-1 break-words">{course.description}</p>
                         )}
                       </div>
-                      <div className="flex flex-col items-end gap-2">
+                      <div className="flex sm:flex-col items-center gap-2 w-full sm:w-auto">
                         <Link
-                          className="text-sm text-primary-600 hover:text-primary-700"
+                          className="text-sm text-primary-600 hover:text-primary-700 whitespace-nowrap"
                           to={`/courses/${course.id}`}
                         >
                           View
                         </Link>
                         {canManageCourses && (
                           <button
-                            className="text-sm text-red-600 hover:text-red-700"
+                            className="text-sm text-red-600 hover:text-red-700 whitespace-nowrap"
                             onClick={() => handleDeleteCourse(course.id)}
                           >
                             Delete
@@ -283,13 +309,51 @@ const DashboardPage = () => {
                     </div>
                   ))}
                   {!courses.length && (
-                    <p className="text-sm text-gray-600">No courses yet. Create the first one.</p>
+                    <EmptyState
+                      icon="📚"
+                      title="No courses yet"
+                      description={canManageCourses ? "Create your first course to get started" : "No courses available"}
+                    />
                   )}
                 </div>
               </div>
 
               <div className="card">
                 <h2 className="text-lg font-semibold mb-3">Enrollments</h2>
+                {user.role === 'student' && balance && (
+                  <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 text-sm">
+                      <div>
+                        <p className="text-gray-600">Total Tuition</p>
+                        <p className="font-semibold">
+                          ${balance.total_tuition.toFixed(2)} {balance.currency.toUpperCase()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Total Paid</p>
+                        <p className="font-semibold text-green-600">
+                          ${balance.total_paid.toFixed(2)} {balance.currency.toUpperCase()}
+                        </p>
+                      </div>
+                      {balance.total_refunded > 0 && (
+                        <div>
+                          <p className="text-gray-600">Refunded</p>
+                          <p className="font-semibold text-blue-600">
+                            ${balance.total_refunded.toFixed(2)} {balance.currency.toUpperCase()}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-gray-600">Balance Due</p>
+                        <p
+                          className={`font-semibold ${balance.balance > 0 ? 'text-red-600' : 'text-green-600'}`}
+                        >
+                          ${balance.balance.toFixed(2)} {balance.currency.toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-3 max-h-96 overflow-auto pr-1">
                   {enrollments.map((enrollment) => (
                     <div
@@ -362,7 +426,11 @@ const DashboardPage = () => {
                     </div>
                   ))}
                   {!enrollments.length && (
-                    <p className="text-sm text-gray-600">No enrollments yet.</p>
+                    <EmptyState
+                      icon="🎓"
+                      title="No enrollments yet"
+                      description="Enroll in a course below to get started"
+                    />
                   )}
                 </div>
               </div>
@@ -371,7 +439,7 @@ const DashboardPage = () => {
             {canManageCourses && (
               <section className="card">
                 <h2 className="text-lg font-semibold mb-3">Create Course</h2>
-                <form className="grid md:grid-cols-2 gap-4" onSubmit={handleCreateCourse}>
+                <form className="grid sm:grid-cols-2 gap-4" onSubmit={handleCreateCourse}>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
                     <input
@@ -440,7 +508,7 @@ const DashboardPage = () => {
                       required
                     />
                   </div>
-                  <div className="md:col-span-2">
+                  <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Description
                     </label>
@@ -452,8 +520,8 @@ const DashboardPage = () => {
                       }
                     />
                   </div>
-                  <div className="md:col-span-2">
-                    <button className="btn-primary" type="submit" disabled={courseSaving}>
+                  <div className="sm:col-span-2">
+                    <button className="btn-primary w-full sm:w-auto" type="submit" disabled={courseSaving}>
                       {courseSaving ? 'Saving...' : 'Create course'}
                     </button>
                   </div>
@@ -463,7 +531,7 @@ const DashboardPage = () => {
 
             <section className="card">
               <h2 className="text-lg font-semibold mb-3">Enroll in a Course</h2>
-              <form className="grid md:grid-cols-3 gap-4 items-end" onSubmit={handleEnroll}>
+              <form className="grid sm:grid-cols-3 gap-4 items-end" onSubmit={handleEnroll}>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
                   <select
@@ -496,7 +564,7 @@ const DashboardPage = () => {
                   </div>
                 )}
 
-                <div className="md:col-span-1">
+                <div className="sm:col-span-full">
                   <button className="btn-primary w-full" type="submit" disabled={enrolling}>
                     {enrolling ? 'Enrolling...' : 'Enroll'}
                   </button>
@@ -508,6 +576,67 @@ const DashboardPage = () => {
                 </p>
               )}
             </section>
+
+            {user.role === 'student' && transactions.length > 0 && (
+              <section className="card">
+                <h2 className="text-lg font-semibold mb-3">Recent Transactions</h2>
+                <div className="space-y-2 max-h-80 overflow-auto pr-1">
+                  {transactions.slice(0, 10).map((txn) => (
+                    <div
+                      key={txn.id}
+                      className="border border-gray-200 rounded-lg p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between text-sm gap-2"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {txn.type === 'payment' && 'Payment'}
+                          {txn.type === 'refund' && 'Refund'}
+                          {txn.type === 'adjustment' && 'Adjustment'}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          {new Date(txn.created_at).toLocaleString()}
+                        </p>
+                        {txn.description && (
+                          <p className="text-xs text-gray-500 mt-1">{txn.description}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p
+                          className={`font-semibold ${txn.type === 'payment' ? 'text-green-600' : txn.type === 'refund' ? 'text-blue-600' : 'text-gray-700'}`}
+                        >
+                          {txn.type === 'refund' ? '+' : '-'}${txn.amount.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-500 capitalize">{txn.status}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {announcements.length > 0 && (
+              <section className="card">
+                <h2 className="text-lg font-semibold mb-3">Recent Announcements</h2>
+                <div className="space-y-3 max-h-96 overflow-auto pr-1">
+                  {announcements.slice(0, 5).map((announcement) => (
+                    <div
+                      key={announcement.id}
+                      className="border border-gray-200 rounded-lg p-3"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold text-gray-900">{announcement.title}</h3>
+                        <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
+                          {new Date(announcement.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{announcement.message}</p>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Course #{announcement.course_id}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
           </>
         )}
       </main>
