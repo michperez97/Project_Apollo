@@ -43,6 +43,5 @@ export interface CreateSubmissionInput {
 
 export type SubmissionVisibility = 'all' | 'own';
 
-export const isStaff = (role: UserRole) => role === 'admin' || role === 'teacher';
-
+export const isStaff = (role: UserRole) => role === 'admin' || role === 'instructor';
 

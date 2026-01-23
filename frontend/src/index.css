@@ -3,6 +3,15 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --apollo-ink: #0f172a;
+    --apollo-muted: #475569;
+    --apollo-cream: #fbf7f0;
+    --apollo-sand: #f3efe7;
+    --apollo-sans: "Avenir Next", "Avenir", "Gill Sans", "Trebuchet MS", sans-serif;
+    --apollo-serif: "Baskerville", "Didot", "Times New Roman", serif;
+  }
+
   body {
     @apply bg-gray-50 text-gray-900;
   }
@@ -15,7 +24,42 @@
   }
 }
 
+@keyframes apollo-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer components {
+  .apollo-landing {
+    background: radial-gradient(circle at top right, #fde68a 0%, transparent 45%),
+      radial-gradient(circle at 20% 80%, #bae6fd 0%, transparent 50%),
+      linear-gradient(135deg, var(--apollo-cream) 0%, #ffffff 60%);
+    color: var(--apollo-ink);
+    font-family: var(--apollo-sans);
+  }
+
+  .apollo-hero-title {
+    font-family: var(--apollo-serif);
+    letter-spacing: -0.02em;
+  }
+
+  .apollo-chip {
+    @apply rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-slate-500;
+  }
+
+  .apollo-card {
+    @apply rounded-3xl border border-white/70 bg-white/80 p-8 shadow-xl backdrop-blur;
+  }
+
+  .apollo-course-card {
+    @apply rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg;
+  }
   .btn-primary {
     @apply bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 min-h-[44px] flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed;
   }

@@ -17,7 +17,7 @@ const LoginPage = () => {
     setError(null);
     try {
       await login(email, password);
-      const redirectTo = (location.state as { from?: Location })?.from?.pathname ?? '/';
+      const redirectTo = (location.state as { from?: Location })?.from?.pathname ?? '/dashboard';
       navigate(redirectTo);
     } catch (err) {
       console.error(err);
@@ -69,5 +69,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-
 

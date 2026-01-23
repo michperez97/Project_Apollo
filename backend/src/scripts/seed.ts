@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import pool from '../config/database';
 
-type UserRole = 'admin' | 'teacher' | 'student';
+type UserRole = 'admin' | 'instructor' | 'student';
 
 type UserRow = {
   id: number;
@@ -17,7 +17,7 @@ type CourseRow = {
 
 const SEED_PASSWORD = process.env.SEED_PASSWORD ?? 'Password123!';
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@apollo.local';
-const TEACHER_EMAIL = process.env.SEED_TEACHER_EMAIL ?? 'teacher@apollo.local';
+const INSTRUCTOR_EMAIL = process.env.SEED_INSTRUCTOR_EMAIL ?? 'instructor@apollo.local';
 const STUDENT_EMAIL = process.env.SEED_STUDENT_EMAIL ?? 'student@apollo.local';
 
 const upsertUser = async (role: UserRole, email: string, passwordHash: string): Promise<UserRow> => {
@@ -35,7 +35,7 @@ const upsertUser = async (role: UserRole, email: string, passwordHash: string): 
     [
       email,
       passwordHash,
-      role === 'admin' ? 'Admin' : role === 'teacher' ? 'Teacher' : 'Student',
+      role === 'admin' ? 'Admin' : role === 'instructor' ? 'Instructor' : 'Student',
       'User',
       role
     ]
@@ -44,10 +44,10 @@ const upsertUser = async (role: UserRole, email: string, passwordHash: string): 
   return result.rows[0];
 };
 
-const upsertCourse = async (teacherId: number): Promise<CourseRow> => {
+const upsertCourse = async (instructorId: number): Promise<CourseRow> => {
   const result = await pool.query<CourseRow>(
-    `INSERT INTO courses (code, name, description, credit_hours, price_per_credit, teacher_id, semester, year)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO courses (code, name, description, credit_hours, price_per_credit, teacher_id, semester, year, title, category, price, status, instructor_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      ON CONFLICT (code)
      DO UPDATE SET
        name = EXCLUDED.name,
@@ -57,17 +57,27 @@ const upsertCourse = async (teacherId: number): Promise<CourseRow> => {
        teacher_id = EXCLUDED.teacher_id,
        semester = EXCLUDED.semester,
        year = EXCLUDED.year,
+       title = EXCLUDED.title,
+       category = EXCLUDED.category,
+       price = EXCLUDED.price,
+       status = EXCLUDED.status,
+       instructor_id = EXCLUDED.instructor_id,
        updated_at = CURRENT_TIMESTAMP
      RETURNING id, credit_hours, price_per_credit`,
     [
-      'APOLLO-101',
-      'Foundations of Project Apollo',
-      'Sample course seeded for development',
+      'DATA-STRUCT-101',
+      'Data Structures',
+      'Core data structures and how to apply them in real-world problem solving.',
       3,
-      150,
-      teacherId,
-      'Fall',
-      new Date().getFullYear()
+      120,
+      instructorId,
+      'On Demand',
+      new Date().getFullYear(),
+      'Data Structures',
+      'Computer Science',
+      149,
+      'approved',
+      instructorId
     ]
   );
 
@@ -180,10 +190,10 @@ const main = async () => {
   const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
 
   const admin = await upsertUser('admin', ADMIN_EMAIL, passwordHash);
-  const teacher = await upsertUser('teacher', TEACHER_EMAIL, passwordHash);
+  const instructor = await upsertUser('instructor', INSTRUCTOR_EMAIL, passwordHash);
   const student = await upsertUser('student', STUDENT_EMAIL, passwordHash);
 
-  const course = await upsertCourse(teacher.id);
+  const course = await upsertCourse(instructor.id);
   const tuitionAmount = Number(course.credit_hours) * Number(course.price_per_credit);
   await upsertEnrollment(student.id, course.id, tuitionAmount);
 
@@ -199,7 +209,7 @@ const main = async () => {
     2
   );
 
-  const assignmentId = await getOrCreateAssignment(course.id, moduleId, teacher.id, {
+  const assignmentId = await getOrCreateAssignment(course.id, moduleId, instructor.id, {
     title: 'Homework 1',
     description: 'Complete the onboarding checklist.',
     points: 100
@@ -213,7 +223,7 @@ const main = async () => {
 
   console.log('Seed complete');
   console.log(`Admin: ${admin.email}`);
-  console.log(`Teacher: ${teacher.email}`);
+  console.log(`Instructor: ${instructor.email}`);
   console.log(`Student: ${student.email}`);
   console.log(`Course ID: ${course.id}`);
 };

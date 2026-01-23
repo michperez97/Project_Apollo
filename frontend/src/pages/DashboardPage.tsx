@@ -56,10 +56,10 @@ const DashboardPage = () => {
   };
 
   const canManageCourses = useMemo(
-    () => user?.role === 'admin' || user?.role === 'teacher',
+    () => user?.role === 'admin' || user?.role === 'instructor',
     [user]
   );
-  const canEnrollOthers = useMemo(() => user?.role === 'admin' || user?.role === 'teacher', [user]);
+  const canEnrollOthers = useMemo(() => user?.role === 'admin' || user?.role === 'instructor', [user]);
 
   useEffect(() => {
     const load = async () => {
@@ -103,12 +103,18 @@ const DashboardPage = () => {
     setCourseSaving(true);
     setError(null);
     try {
+      const creditHours = Number(courseForm.credit_hours);
+      const pricePerCredit = Number(courseForm.price_per_credit);
       const payload: Omit<Course, 'id'> = {
+        title: courseForm.name,
+        description: courseForm.description,
+        category: courseForm.code || 'General',
+        price: creditHours * pricePerCredit,
+        instructor_id: courseForm.teacher_id ? Number(courseForm.teacher_id) : null,
         code: courseForm.code,
         name: courseForm.name,
-        description: courseForm.description,
-        credit_hours: Number(courseForm.credit_hours),
-        price_per_credit: Number(courseForm.price_per_credit),
+        credit_hours: creditHours,
+        price_per_credit: pricePerCredit,
         teacher_id: courseForm.teacher_id ? Number(courseForm.teacher_id) : null,
         semester: courseForm.semester,
         year: Number(courseForm.year)
@@ -645,4 +651,3 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
-

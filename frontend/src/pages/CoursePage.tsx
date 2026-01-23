@@ -60,7 +60,7 @@ const CoursePage = () => {
   const [gradeDrafts, setGradeDrafts] = useState<Record<number, { grade: string; feedback: string }>>({});
 
   const canManage = useMemo(
-    () => user?.role === 'admin' || user?.role === 'teacher',
+    () => user?.role === 'admin' || user?.role === 'instructor',
     [user]
   );
 
@@ -717,7 +717,7 @@ const CoursePage = () => {
                     </div>
                   )}
 
-                  {(user?.role === 'admin' || user?.role === 'teacher') && (
+                  {(user?.role === 'admin' || user?.role === 'instructor') && (
                     <div className="space-y-2">
                       <p className="text-sm text-gray-700 font-semibold">
                         Submissions ({submissions[assignment.id]?.length ?? 0})
@@ -872,4 +872,3 @@ const CoursePage = () => {
 };
 
 export default CoursePage;
-

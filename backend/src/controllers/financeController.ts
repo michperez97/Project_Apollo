@@ -24,8 +24,8 @@ export const getBalanceHandler = async (
     let studentId: number;
 
     if (studentIdParam) {
-      if (user.role !== 'admin' && user.role !== 'teacher') {
-        return res.status(403).json({ error: 'Only admins/teachers can view other student balances' });
+      if (user.role !== 'admin' && user.role !== 'instructor') {
+        return res.status(403).json({ error: 'Only admins/instructors can view other student balances' });
       }
       studentId = Number(studentIdParam);
     } else {
@@ -61,8 +61,8 @@ export const listTransactionsHandler = async (
     const studentIdQuery = req.query.studentId ? Number(req.query.studentId) : undefined;
 
     if (studentIdQuery !== undefined) {
-      if (user.role !== 'admin' && user.role !== 'teacher') {
-        return res.status(403).json({ error: 'Only admins/teachers can view other student transactions' });
+      if (user.role !== 'admin' && user.role !== 'instructor') {
+        return res.status(403).json({ error: 'Only admins/instructors can view other student transactions' });
       }
       const transactions = await listTransactionsByStudent(studentIdQuery);
       return res.json({ transactions });

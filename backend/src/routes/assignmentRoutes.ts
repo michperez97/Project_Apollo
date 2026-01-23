@@ -22,19 +22,19 @@ router.get(
 router.post(
   '/courses/:courseId/assignments',
   authenticate,
-  authorizeRoles('admin', 'teacher'),
+  authorizeRoles('admin', 'instructor'),
   createAssignmentHandler
 );
 router.put(
   '/assignments/:id',
   authenticate,
-  authorizeRoles('admin', 'teacher'),
+  authorizeRoles('admin', 'instructor'),
   updateAssignmentHandler
 );
 router.delete(
   '/assignments/:id',
   authenticate,
-  authorizeRoles('admin', 'teacher'),
+  authorizeRoles('admin', 'instructor'),
   deleteAssignmentHandler
 );
 router.get('/assignments/:id/submissions', authenticate, listSubmissionsHandler);
@@ -42,7 +42,7 @@ router.post('/assignments/:id/submissions', authenticate, submitAssignmentHandle
 router.post(
   '/submissions/:id/grade',
   authenticate,
-  authorizeRoles('admin', 'teacher'),
+  authorizeRoles('admin', 'instructor'),
   gradeSubmissionHandler
 );
 router.get(
@@ -53,9 +53,8 @@ router.get(
 router.get(
   '/courses/:courseId/gradebook.csv',
   authenticate,
-  authorizeRoles('admin', 'teacher'),
+  authorizeRoles('admin', 'instructor'),
   gradebookCsvHandler
 );
 
 export default router;
-

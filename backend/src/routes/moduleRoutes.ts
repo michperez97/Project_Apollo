@@ -16,36 +16,34 @@ router.get('/courses/:courseId/modules', authenticate, getModulesForCourse);
 router.post(
   '/courses/:courseId/modules',
   authenticate,
-  authorizeRoles('admin', 'teacher'),
+  authorizeRoles('admin', 'instructor'),
   createModuleHandler
 );
-router.put('/modules/:id', authenticate, authorizeRoles('admin', 'teacher'), updateModuleHandler);
+router.put('/modules/:id', authenticate, authorizeRoles('admin', 'instructor'), updateModuleHandler);
 router.delete(
   '/modules/:id',
   authenticate,
-  authorizeRoles('admin', 'teacher'),
+  authorizeRoles('admin', 'instructor'),
   deleteModuleHandler
 );
 
 router.post(
   '/modules/:moduleId/items',
   authenticate,
-  authorizeRoles('admin', 'teacher'),
+  authorizeRoles('admin', 'instructor'),
   createModuleItemHandler
 );
 router.put(
   '/module-items/:id',
   authenticate,
-  authorizeRoles('admin', 'teacher'),
+  authorizeRoles('admin', 'instructor'),
   updateModuleItemHandler
 );
 router.delete(
   '/module-items/:id',
   authenticate,
-  authorizeRoles('admin', 'teacher'),
+  authorizeRoles('admin', 'instructor'),
   deleteModuleItemHandler
 );
 
 export default router;
-
-

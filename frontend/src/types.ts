@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'teacher' | 'student';
+export type UserRole = 'admin' | 'instructor' | 'student';
 
 export interface User {
   id: number;
@@ -17,14 +17,20 @@ export interface AuthResponse {
 
 export interface Course {
   id: number;
-  code: string;
-  name: string;
+  title?: string;
   description?: string | null;
-  credit_hours: number;
-  price_per_credit: number;
+  category?: string | null;
+  price?: number | null;
+  thumbnail_url?: string | null;
+  status?: 'draft' | 'pending' | 'approved' | 'rejected';
+  instructor_id?: number | null;
+  code?: string;
+  name?: string;
+  credit_hours?: number;
+  price_per_credit?: number;
   teacher_id?: number | null;
-  semester: string;
-  year: number;
+  semester?: string;
+  year?: number;
 }
 
 export interface Enrollment {
@@ -142,4 +148,3 @@ export interface Announcement {
   created_at: string;
   updated_at: string;
 }
-

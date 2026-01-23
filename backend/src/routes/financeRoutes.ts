@@ -10,7 +10,7 @@ import {
 const router = Router();
 
 router.get('/balance', authenticate, getBalanceHandler);
-router.get('/balance/:studentId', authenticate, authorizeRoles('admin', 'teacher'), getBalanceHandler);
+router.get('/balance/:studentId', authenticate, authorizeRoles('admin', 'instructor'), getBalanceHandler);
 router.get('/transactions', authenticate, listTransactionsHandler);
 router.get('/summary', authenticate, authorizeRoles('admin'), getFinancialSummaryHandler);
 router.get('/students', authenticate, authorizeRoles('admin'), listStudentBalancesHandler);

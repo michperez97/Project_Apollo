@@ -9,9 +9,9 @@ import {
 
 const router = Router();
 
-router.post('/', authenticate, authorizeRoles('admin', 'teacher'), createAnnouncementHandler);
+router.post('/', authenticate, authorizeRoles('admin', 'instructor'), createAnnouncementHandler);
 router.get('/', authenticate, listAnnouncementsHandler);
-router.put('/:id', authenticate, authorizeRoles('admin', 'teacher'), updateAnnouncementHandler);
-router.delete('/:id', authenticate, authorizeRoles('admin', 'teacher'), deleteAnnouncementHandler);
+router.put('/:id', authenticate, authorizeRoles('admin', 'instructor'), updateAnnouncementHandler);
+router.delete('/:id', authenticate, authorizeRoles('admin', 'instructor'), deleteAnnouncementHandler);
 
 export default router;

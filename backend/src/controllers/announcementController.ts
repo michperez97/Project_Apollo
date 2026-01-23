@@ -21,8 +21,8 @@ export const createAnnouncementHandler = async (
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    if (user.role !== 'admin' && user.role !== 'teacher') {
-      return res.status(403).json({ error: 'Only admins and teachers can create announcements' });
+    if (user.role !== 'admin' && user.role !== 'instructor') {
+      return res.status(403).json({ error: 'Only admins and instructors can create announcements' });
     }
 
     const { course_id, title, message } = req.body;
@@ -82,8 +82,8 @@ export const updateAnnouncementHandler = async (
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    if (user.role !== 'admin' && user.role !== 'teacher') {
-      return res.status(403).json({ error: 'Only admins and teachers can update announcements' });
+    if (user.role !== 'admin' && user.role !== 'instructor') {
+      return res.status(403).json({ error: 'Only admins and instructors can update announcements' });
     }
 
     const announcementId = Number(req.params.id);
@@ -94,7 +94,7 @@ export const updateAnnouncementHandler = async (
       return res.status(404).json({ error: 'Announcement not found' });
     }
 
-    if (user.role === 'teacher' && existing.teacher_id !== user.sub) {
+    if (user.role === 'instructor' && existing.teacher_id !== user.sub) {
       return res.status(403).json({ error: 'You can only update your own announcements' });
     }
 
@@ -117,8 +117,8 @@ export const deleteAnnouncementHandler = async (
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    if (user.role !== 'admin' && user.role !== 'teacher') {
-      return res.status(403).json({ error: 'Only admins and teachers can delete announcements' });
+    if (user.role !== 'admin' && user.role !== 'instructor') {
+      return res.status(403).json({ error: 'Only admins and instructors can delete announcements' });
     }
 
     const announcementId = Number(req.params.id);
@@ -128,7 +128,7 @@ export const deleteAnnouncementHandler = async (
       return res.status(404).json({ error: 'Announcement not found' });
     }
 
-    if (user.role === 'teacher' && existing.teacher_id !== user.sub) {
+    if (user.role === 'instructor' && existing.teacher_id !== user.sub) {
       return res.status(403).json({ error: 'You can only delete your own announcements' });
     }
 

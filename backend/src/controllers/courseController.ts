@@ -4,14 +4,24 @@ import {
   createCourse,
   deleteCourse,
   getCourseById,
+  getPublishedCourseById,
   listCourses,
+  listPublishedCourses,
   updateCourse
 } from '../models/courseModel';
 import { AuthenticatedRequest } from '../types/auth';
 
 export const getCourses = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const courses = await listCourses();
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'instructor')) {
+      const scope = typeof req.query.scope === 'string' ? req.query.scope : '';
+      if (scope === 'all') {
+        const courses = await listCourses();
+        return res.json({ courses });
+      }
+    }
+
+    const courses = await listPublishedCourses();
     return res.json({ courses });
   } catch (error) {
     return next(error);
@@ -21,7 +31,19 @@ export const getCourses = async (req: AuthenticatedRequest, res: Response, next:
 export const getCourse = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const courseId = Number(req.params.id);
-    const course = await getCourseById(courseId);
+    if (!Number.isFinite(courseId)) {
+      return res.status(400).json({ error: 'Invalid course id' });
+    }
+
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'instructor')) {
+      const course = await getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ error: 'Course not found' });
+      }
+      return res.json({ course });
+    }
+
+    const course = await getPublishedCourseById(courseId);
     if (!course) {
       return res.status(404).json({ error: 'Course not found' });
     }
@@ -38,18 +60,16 @@ export const createCourseHandler = async (
 ) => {
   try {
     const payload: CourseInput = req.body;
-    const requiredFields: Array<keyof CourseInput> = [
-      'code',
-      'name',
-      'credit_hours',
-      'price_per_credit',
-      'semester',
-      'year'
-    ];
+    const requiredFields: Array<keyof CourseInput> = ['title', 'description', 'category', 'price'];
 
     const missing = requiredFields.filter((field) => payload[field] === undefined);
     if (missing.length) {
       return res.status(400).json({ error: `Missing fields: ${missing.join(', ')}` });
+    }
+
+    if (req.user?.role === 'instructor') {
+      payload.instructor_id = req.user.sub;
+      payload.status = payload.status ?? 'draft';
     }
 
     const course = await createCourse(payload);
@@ -95,5 +115,3 @@ export const deleteCourseHandler = async (
     return next(error);
   }
 };
-
-

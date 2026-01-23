@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'teacher' | 'student';
+export type UserRole = 'admin' | 'instructor' | 'student';
 
 export interface UserRecord {
   id: number;
@@ -28,5 +28,4 @@ export interface CreateUserInput {
   last_name: string;
   role: UserRole;
 }
-
 

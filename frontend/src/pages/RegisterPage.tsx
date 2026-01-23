@@ -25,7 +25,7 @@ const RegisterPage = () => {
     setError(null);
     try {
       await register(form);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       console.error(err);
       setError('Could not create account. Try a different email.');
@@ -87,7 +87,7 @@ const RegisterPage = () => {
               onChange={(e) => handleChange('role', e.target.value)}
             >
               <option value="student">Student</option>
-              <option value="teacher">Teacher</option>
+              <option value="instructor">Instructor</option>
               <option value="admin">Admin</option>
             </select>
           </div>
@@ -108,5 +108,3 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
-
-
