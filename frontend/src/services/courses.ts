@@ -25,3 +25,28 @@ export const deleteCourse = async (id: number): Promise<void> => {
   await api.delete(`/courses/${id}`);
 };
 
+export const getInstructorCourses = async (): Promise<Course[]> => {
+  const { data } = await api.get<{ courses: Course[] }>('/instructor/courses');
+  return data.courses;
+};
+
+export const submitCourse = async (courseId: number): Promise<Course> => {
+  const { data } = await api.post<{ course: Course }>(`/courses/${courseId}/submit`);
+  return data.course;
+};
+
+export const getPendingCourses = async (): Promise<Course[]> => {
+  const { data } = await api.get<{ courses: Course[] }>('/admin/courses/pending');
+  return data.courses;
+};
+
+export const approveCourse = async (courseId: number, feedback?: string): Promise<Course> => {
+  const { data } = await api.post<{ course: Course }>(`/admin/courses/${courseId}/approve`, { feedback });
+  return data.course;
+};
+
+export const rejectCourse = async (courseId: number, feedback: string): Promise<Course> => {
+  const { data } = await api.post<{ course: Course }>(`/admin/courses/${courseId}/reject`, { feedback });
+  return data.course;
+};
+

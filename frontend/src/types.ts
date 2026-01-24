@@ -24,6 +24,9 @@ export interface Course {
   thumbnail_url?: string | null;
   status?: 'draft' | 'pending' | 'approved' | 'rejected';
   instructor_id?: number | null;
+  published_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
   code?: string;
   name?: string;
   credit_hours?: number;

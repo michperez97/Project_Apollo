@@ -46,3 +46,58 @@ export const constructStripeEvent = (payload: Buffer, signature: string | string
 
   return stripe.webhooks.constructEvent(payload, signature, STRIPE_WEBHOOK_SECRET);
 };
+
+export interface CheckoutSessionParams {
+  amountCents: number;
+  courseId: number;
+  courseTitle: string;
+  studentId: number;
+  customerEmail?: string;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+export const createCheckoutSession = async (params: CheckoutSessionParams) => {
+  const {
+    amountCents,
+    courseId,
+    courseTitle,
+    studentId,
+    customerEmail,
+    successUrl,
+    cancelUrl
+  } = params;
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    mode: 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency: STRIPE_CURRENCY,
+          unit_amount: amountCents,
+          product_data: {
+            name: courseTitle
+          }
+        },
+        quantity: 1
+      }
+    ],
+    metadata: {
+      course_id: String(courseId),
+      student_id: String(studentId)
+    },
+    success_url: successUrl,
+    cancel_url: cancelUrl
+  };
+
+  if (customerEmail) {
+    sessionParams.customer_email = customerEmail;
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionParams);
+
+  return {
+    id: session.id,
+    url: session.url
+  };
+};

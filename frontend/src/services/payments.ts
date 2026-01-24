@@ -1,5 +1,10 @@
 import { api } from './http';
-import { PaymentIntentSession, StudentBalance, Transaction, FinancialSummary, StudentBalanceDetail } from '../types';
+import { Enrollment, PaymentIntentSession, StudentBalance, Transaction, FinancialSummary, StudentBalanceDetail } from '../types';
+
+export interface CheckoutSessionResponse {
+  checkout?: { id: string; url: string };
+  enrollment?: Enrollment;
+}
 
 export const createPaymentIntent = async (
   enrollmentId: number
@@ -7,6 +12,18 @@ export const createPaymentIntent = async (
   const { data } = await api.post<PaymentIntentSession>('/payments/intents', {
     enrollmentId
   });
+  return data;
+};
+
+export const createCheckoutSession = async (
+  courseId: number,
+  studentId?: number
+): Promise<CheckoutSessionResponse> => {
+  const payload: { courseId: number; student_id?: number } = { courseId };
+  if (studentId) {
+    payload.student_id = studentId;
+  }
+  const { data } = await api.post<CheckoutSessionResponse>('/payments/checkout', payload);
   return data;
 };
 

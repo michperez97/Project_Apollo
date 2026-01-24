@@ -11,6 +11,7 @@ export interface CourseRecord {
   thumbnail_url: string | null;
   status: CourseStatus;
   instructor_id: number | null;
+  published_at: Date | null;
   created_at: Date;
   updated_at: Date;
   code?: string;
@@ -227,4 +228,39 @@ export const updateCourse = async (id: number, data: Partial<CourseInput>): Prom
 export const deleteCourse = async (id: number): Promise<boolean> => {
   const result = await pool.query('DELETE FROM courses WHERE id = $1', [id]);
   return (result.rowCount ?? 0) > 0;
+};
+
+export const listCoursesByInstructor = async (instructorId: number): Promise<CourseRecord[]> => {
+  const result = await pool.query<CourseRecord>(
+    'SELECT * FROM courses WHERE instructor_id = $1 ORDER BY created_at DESC',
+    [instructorId]
+  );
+  return result.rows;
+};
+
+export const listPendingCourses = async (): Promise<CourseRecord[]> => {
+  const result = await pool.query<CourseRecord>(
+    "SELECT * FROM courses WHERE status = 'pending' ORDER BY created_at ASC"
+  );
+  return result.rows;
+};
+
+export const updateCourseStatus = async (
+  courseId: number,
+  status: CourseStatus,
+  publishedAt: Date | null | undefined = undefined
+): Promise<CourseRecord | null> => {
+  // If publishedAt is explicitly passed (even null), set it directly
+  // If undefined, keep existing value
+  const setPublishedAt = publishedAt !== undefined;
+  const result = await pool.query<CourseRecord>(
+    `UPDATE courses
+     SET status = $1,
+         published_at = CASE WHEN $2 THEN $3 ELSE published_at END,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $4
+     RETURNING *`,
+    [status, setPublishedAt, publishedAt ?? null, courseId]
+  );
+  return result.rows[0] ?? null;
 };

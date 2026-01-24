@@ -67,4 +67,15 @@ export const updateEnrollmentPaymentStatus = async (
   return result.rows[0] ?? null;
 };
 
+export const getEnrollmentByStudentAndCourse = async (
+  studentId: number,
+  courseId: number
+): Promise<EnrollmentRecord | null> => {
+  const result = await pool.query<EnrollmentRecord>(
+    `SELECT * FROM enrollments WHERE student_id = $1 AND course_id = $2 LIMIT 1`,
+    [studentId, courseId]
+  );
+  return result.rows[0] ?? null;
+};
+
 

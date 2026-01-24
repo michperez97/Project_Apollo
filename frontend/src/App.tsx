@@ -6,6 +6,11 @@ import RegisterPage from './pages/RegisterPage';
 import CoursePage from './pages/CoursePage';
 import AdminFinancialDashboard from './pages/AdminFinancialDashboard';
 import LandingPage from './pages/LandingPage';
+import InstructorCoursesPage from './pages/InstructorCoursesPage';
+import AdminModerationQueue from './pages/AdminModerationQueue';
+import CourseDetailPage from './pages/CourseDetailPage';
+import CoursePlayerPage from './pages/CoursePlayerPage';
+import StudentDashboardPage from './pages/StudentDashboardPage';
 
 const App = () => {
   return (
@@ -13,6 +18,7 @@ const App = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/" element={<LandingPage />} />
+      <Route path="/course/:courseId" element={<CourseDetailPage />} />
       <Route
         path="/dashboard"
         element={
@@ -30,10 +36,42 @@ const App = () => {
         }
       />
       <Route
+        path="/learn/:courseId"
+        element={
+          <ProtectedRoute>
+            <CoursePlayerPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/dashboard"
+        element={
+          <ProtectedRoute>
+            <StudentDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/finance"
         element={
           <ProtectedRoute>
             <AdminFinancialDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/instructor/courses"
+        element={
+          <ProtectedRoute>
+            <InstructorCoursesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/moderation"
+        element={
+          <ProtectedRoute>
+            <AdminModerationQueue />
           </ProtectedRoute>
         }
       />

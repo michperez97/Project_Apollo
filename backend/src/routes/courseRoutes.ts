@@ -4,7 +4,8 @@ import {
   deleteCourseHandler,
   getCourse,
   getCourses,
-  updateCourseHandler
+  updateCourseHandler,
+  submitCourseHandler
 } from '../controllers/courseController';
 import { authenticate, authorizeRoles, optionalAuthenticate } from '../middleware/authMiddleware';
 
@@ -15,5 +16,6 @@ router.get('/:id', optionalAuthenticate, getCourse);
 router.post('/', authenticate, authorizeRoles('admin', 'instructor'), createCourseHandler);
 router.put('/:id', authenticate, authorizeRoles('admin', 'instructor'), updateCourseHandler);
 router.delete('/:id', authenticate, authorizeRoles('admin'), deleteCourseHandler);
+router.post('/:id/submit', authenticate, authorizeRoles('admin', 'instructor'), submitCourseHandler);
 
 export default router;

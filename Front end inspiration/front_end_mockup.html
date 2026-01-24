@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apollo | Industrial Systems Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        bg: '#F5F5F4', // Stone 100 - Slightly warmer than cool gray
+                        surface: '#FFFFFF', 
+                        border: '#D6D3D1', // Stone 300
+                        'border-strong': '#78716C', // Stone 500
+                        acid: '#D9F99D', // Lime 200
+                        alert: '#FCD34D', // Amber 300
+                        zinc: {
+                            50: '#FAFAFA',
+                            100: '#F5F5F5',
+                            200: '#E5E5E5',
+                            300: '#D4D4D4',
+                            400: '#A3A3A3',
+                            500: '#737373',
+                            600: '#525252',
+                            700: '#404040',
+                            800: '#262626',
+                            900: '#171717', 
+                        }
+                    },
+                    boxShadow: {
+                        'technical': '0 1px 2px 0 rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0,0,0,0.02)',
+                        'floating': '0 8px 20px -4px rgba(0, 0, 0, 0.1), 0 4px 8px -2px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(217, 249, 157, 0.4)',
+                    },
+                    transitionTimingFunction: {
+                        'spring': 'cubic-bezier(0.2, 0.8, 0.2, 1)', // Snappy, humane motion
+                    },
+                    borderRadius: {
+                        'lg': '0.6rem', 
+                        'xl': '0.8rem',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #F5F5F4;
+            /* Subtle dot pattern for texture/warmth */
+            background-image: radial-gradient(#D6D3D1 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .panel-technical {
+            background: #FFFFFF;
+            border: 1px solid #E5E5E5;
+            border-radius: 0.6rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .card-technical {
+            background: #FFFFFF;
+            border: 1px solid #E5E5E5;
+            border-radius: 0.6rem;
+            transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease;
+        }
+
+        .card-technical:hover {
+            border-color: #A3A3A3;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            transform: translateY(-2px);
+        }
+
+        /* Glass Card Updated to Solid White for Visibility */
+        .glass-card {
+            background: #FFFFFF;
+            border: 1px solid #E5E5E5;
+            border-radius: 0.6rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .glass-card:hover {
+            border-color: #A3A3A3;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+        }
+
+        /* Mono text utilities */
+        .txt-mono {
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: -0.02em;
+        }
+
+        .txt-label {
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: #737373;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.active { 
+            background-color: #10B981; 
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15); 
+        }
+        
+        .nav-item-active {
+            background-color: #F5F5F4;
+            color: #171717;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #D4D4D4; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #A3A3A3; }
+
+        input:focus { outline: none; }
+        
+        /* Smooth scale for buttons */
+        .btn-press:active {
+            transform: scale(0.96);
+        }
+        
+        /* Tooltip Arrow */
+        .tooltip-arrow {
+            position: absolute;
+            left: -4px;
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+            width: 8px;
+            height: 8px;
+            background-color: #18181B; 
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="text-zinc-800 font-sans h-screen overflow-hidden flex flex-col md:flex-row">
+
+    <!-- Mobile Nav Toggle -->
+    <div class="md:hidden fixed top-4 left-4 z-50">
+        <button onclick="toggleSidebar()" class="p-2 bg-zinc-900 rounded-full border border-zinc-700 shadow-lg text-white btn-press transition-transform">
+            <i class="ph ph-list text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar: Floating Industrial Rail (Compact Pill) -->
+    <!-- Thinner width: w-12 -->
+    <aside id="sidebar" class="fixed z-50 left-4 w-12 bg-zinc-900 border border-zinc-800 rounded-full flex flex-col items-center py-5 shadow-[0_0_0_1px_rgba(255,255,255,0.05)_inset,0_20px_40px_-12px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-spring transform -translate-x-[150%] md:translate-x-0 h-auto top-1/2 -translate-y-1/2 gap-6">
+        
+        <!-- Top: System Identity & Nav -->
+        <div class="flex flex-col items-center gap-5 w-full">
+            <!-- Brand Mark -->
+            <div class="w-8 h-8 rounded-full bg-black border border-zinc-800 flex items-center justify-center cursor-pointer hover:border-zinc-600 transition-all duration-300 group shadow-inner btn-press shrink-0">
+                <!-- Custom Iconic 'A' Logo -->
+                <svg class="w-4 h-4 fill-white group-hover:fill-acid transition-colors" viewBox="0 0 24 24">
+                    <path d="M12 2L4 22h3.5l1.5-4h6l1.5 4H20L12 2zm0 5.5L14 15h-4l2-7.5z" />
+                </svg>
+            </div>
+
+            <!-- Navigation Rail -->
+            <nav class="flex flex-col gap-3 w-full px-1 items-center">
+                <a href="#" class="group relative flex items-center justify-center w-8 h-8 rounded-full bg-zinc-800 text-white border border-zinc-700 shadow-inner transition-all duration-200 btn-press">
+                    <i class="ph-bold ph-squares-four text-base"></i>
+                    <!-- Dark Tooltip -->
+                    <div class="absolute left-full ml-4 px-3 py-1.5 bg-zinc-900 text-white border border-zinc-800 text-xs font-medium rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 translate-x-[-5px] group-hover:translate-x-0 duration-200">
+                        <div class="tooltip-arrow"></div>
+                        Dashboard
+                    </div>
+                </a>
+
+                <a href="#" class="group relative flex items-center justify-center w-8 h-8 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border hover:border-zinc-700 transition-all duration-200 btn-press border border-transparent">
+                    <i class="ph-bold ph-book-bookmark text-base"></i>
+                    <!-- Notification pip -->
+                    <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-acid rounded-full animate-pulse"></span>
+                    <div class="absolute left-full ml-4 px-3 py-1.5 bg-zinc-900 text-white border border-zinc-800 text-xs font-medium rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 translate-x-[-5px] group-hover:translate-x-0 duration-200 flex items-center gap-2">
+                        <div class="tooltip-arrow"></div>
+                        Modules <span class="bg-zinc-800 text-zinc-400 px-1.5 rounded text-[10px] border border-zinc-700">4</span>
+                    </div>
+                </a>
+
+                <a href="#" class="group relative flex items-center justify-center w-8 h-8 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border hover:border-zinc-700 transition-all duration-200 btn-press border border-transparent">
+                    <i class="ph-bold ph-chart-bar text-base"></i>
+                    <div class="absolute left-full ml-4 px-3 py-1.5 bg-zinc-900 text-white border border-zinc-800 text-xs font-medium rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 translate-x-[-5px] group-hover:translate-x-0 duration-200">
+                        <div class="tooltip-arrow"></div>
+                        Metrics
+                    </div>
+                </a>
+
+                <a href="#" class="group relative flex items-center justify-center w-8 h-8 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border hover:border-zinc-700 transition-all duration-200 btn-press border border-transparent">
+                    <i class="ph-bold ph-calendar-check text-base"></i>
+                    <div class="absolute left-full ml-4 px-3 py-1.5 bg-zinc-900 text-white border border-zinc-800 text-xs font-medium rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 translate-x-[-5px] group-hover:translate-x-0 duration-200">
+                        <div class="tooltip-arrow"></div>
+                        Schedule
+                    </div>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Bottom: User & Status -->
+        <div class="flex flex-col items-center gap-5 w-full px-1">
+            <!-- Connection Status -->
+            <div class="group relative flex items-center justify-center w-6 h-6 cursor-help">
+                <div class="status-dot active group-hover:scale-125 transition-transform bg-acid shadow-[0_0_10px_rgba(217,249,157,0.3)]"></div>
+                <div class="absolute left-full ml-4 px-3 py-1.5 bg-zinc-900 text-acid border border-zinc-800 text-xs font-medium rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                    <div class="tooltip-arrow"></div>
+                    System Online
+                </div>
+            </div>
+
+            <!-- Profile -->
+            <a href="#" class="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 hover:border-zinc-500 hover:shadow-md transition-all duration-200 btn-press shrink-0">
+                <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="User" class="w-full h-full object-cover opacity-80 hover:opacity-100">
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <!-- Margin md:ml-14 to clear w-12 sidebar + gap -->
+    <main class="flex-1 relative z-10 h-full overflow-hidden md:ml-14 transition-all duration-300">
+        
+        <!-- Header: Absolute & Floating Overlay -->
+        <header class="absolute top-0 left-0 w-full px-6 md:px-10 py-6 flex items-center justify-between z-20 pointer-events-none">
+            <!-- Left Floating Tile (Title & Date) -->
+            <div class="rounded-2xl px-5 py-3 flex flex-col animate-fade-in-up pointer-events-auto shadow-lg border border-zinc-200 bg-white">
+                <h1 class="text-lg text-zinc-900 font-bold tracking-tight flex items-center">
+                    Industrial Systems 
+                    <span class="text-zinc-400 mx-2 text-sm font-light">//</span> 
+                    Overview
+                </h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <div class="w-1.5 h-1.5 rounded-full bg-acid shadow-[0_0_5px_rgba(184,230,0,0.5)]"></div>
+                    <span class="text-[10px] text-zinc-500 font-mono tracking-wider font-semibold" id="current-time">LOADING_TIMESTAMP...</span>
+                </div>
+            </div>
+
+            <!-- Right Floating Elements (Search & Bell) -->
+            <div class="flex items-center gap-4 animate-fade-in-up delay-100 pointer-events-auto">
+                <!-- Search Bar -->
+                <div class="hidden md:flex items-center h-11 bg-white border border-zinc-200 rounded-2xl px-4 w-72 focus-within:border-zinc-400 focus-within:ring-1 focus-within:ring-zinc-200 transition-all group shadow-md hover:shadow-lg">
+                    <i class="ph ph-magnifying-glass text-zinc-500 group-focus-within:text-acid transition-colors"></i>
+                    <input type="text" placeholder="Search modules..." class="bg-transparent border-none text-sm text-zinc-900 ml-2 w-full placeholder-zinc-500 focus:placeholder-zinc-400 focus:outline-none font-medium h-full">
+                    <div class="text-[10px] border border-zinc-200 rounded px-1.5 text-zinc-500 font-mono bg-zinc-50">/</div>
+                </div>
+                
+                <!-- Bell Button -->
+                <button class="w-11 h-11 rounded-2xl border border-zinc-200 bg-white flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:border-zinc-300 transition-all relative group shadow-md hover:shadow-lg">
+                    <div class="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-orange animate-pulse"></div>
+                    <i class="ph ph-bell text-xl group-hover:scale-110 transition-transform"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Scrollable Content Canvas -->
+        <div class="h-full overflow-y-auto px-6 md:px-10 pb-6 pt-32 scroll-smooth">
+            
+            <!-- Hero Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+                <!-- Stat Card 1 -->
+                <div class="glass-card p-6 rounded-2xl group animate-fade-in-up delay-100">
+                    <div class="flex justify-between items-start mb-5">
+                        <div class="p-2.5 bg-acid/10 rounded-xl text-acid border border-acid/20">
+                            <i class="ph ph-clock-countdown text-xl"></i>
+                        </div>
+                        <span class="text-[10px] font-mono text-zinc-500 group-hover:text-acid transition-colors uppercase tracking-wider font-semibold">Session Time</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">12<span class="text-zinc-300 animate-pulse">:</span>45</h3>
+                    <div class="w-full bg-zinc-200 h-1 rounded-full mt-3 overflow-hidden">
+                         <div class="bg-acid h-full w-[65%]"></div>
+                    </div>
+                </div>
+
+                <!-- Stat Card 2 (Visual Graph) -->
+                <div class="glass-card p-6 rounded-2xl group animate-fade-in-up delay-200">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="p-2.5 bg-orange/10 rounded-xl text-orange border border-orange/20">
+                            <i class="ph ph-trend-up text-xl"></i>
+                        </div>
+                        <div class="text-right">
+                             <span class="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block font-semibold">XP Gain</span>
+                             <span class="text-xs text-orange font-bold font-mono">+12%</span>
+                        </div>
+                    </div>
+                    <div class="flex items-end justify-between">
+                         <h3 class="text-3xl font-bold text-zinc-900 font-mono tracking-tight">2,450</h3>
+                         <!-- SVG Sparkline -->
+                         <svg width="80" height="30" viewBox="0 0 80 30" fill="none" class="mb-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                             <path d="M1 25 L 15 20 L 25 24 L 35 15 L 45 18 L 60 5 L 79 12" stroke="#FF5C00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                             <path d="M1 25 L 15 20 L 25 24 L 35 15 L 45 18 L 60 5 L 79 12 V 30 H 1 Z" fill="url(#gradient-orange)" opacity="0.2"/>
+                             <defs>
+                                <linearGradient id="gradient-orange" x1="0" y1="0" x2="0" y2="1">
+                                    <stop stop-color="#FF5C00" offset="0%"/>
+                                    <stop stop-color="#FF5C00" stop-opacity="0" offset="100%"/>
+                                </linearGradient>
+                             </defs>
+                         </svg>
+                    </div>
+                </div>
+
+                <!-- Stat Card 3 -->
+                <div class="glass-card p-6 rounded-2xl group animate-fade-in-up delay-300">
+                    <div class="flex justify-between items-start mb-5">
+                        <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-600 border border-blue-500/20">
+                            <i class="ph ph-stack text-xl"></i>
+                        </div>
+                        <span class="text-[10px] font-mono text-zinc-500 uppercase tracking-wider font-semibold">Modules</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">8<span class="text-zinc-300">/</span>12</h3>
+                    <p class="text-xs text-zinc-500 mt-1 font-medium">2 Pending Review</p>
+                </div>
+
+                <!-- Action Card -->
+                <div class="glass-card p-6 rounded-2xl bg-gradient-to-br from-acid/20 to-transparent border-acid/30 flex flex-col justify-center items-center text-center group cursor-pointer animate-fade-in-up delay-400 hover:bg-acid/10 transition-colors relative overflow-hidden">
+                    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-5 mix-blend-multiply"></div>
+                    <div class="w-14 h-14 rounded-full bg-acid text-white flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-90 transition-all duration-300 shadow-[0_4px_15px_rgba(184,230,0,0.4)] z-10">
+                        <i class="ph-fill ph-play text-xl ml-1"></i>
+                    </div>
+                    <h3 class="text-zinc-900 font-bold z-10">Resume Learning</h3>
+                    <p class="text-xs text-zinc-500 mt-1 font-mono z-10 group-hover:text-acid-600 transition-colors font-medium">PLC Programming v2.0</p>
+                </div>
+            </div>
+
+            <!-- Content Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Main Course List -->
+                <div class="lg:col-span-2 space-y-6 animate-fade-in-up delay-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-zinc-900 font-bold flex items-center gap-3 text-lg">
+                            <i class="ph-fill ph-cpu text-zinc-400"></i> Active Courses
+                        </h2>
+                        <button class="text-[10px] text-zinc-500 hover:text-zinc-900 transition-colors font-mono uppercase border border-zinc-200 px-3 py-1.5 rounded hover:bg-zinc-100 hover:border-zinc-300 font-semibold bg-white">View All Courses</button>
+                    </div>
+
+                    <!-- Course Card 1 -->
+                    <div class="glass-card p-0 rounded-2xl flex flex-col sm:flex-row overflow-hidden group border border-zinc-200 hover:border-acid/50 shadow-sm hover:shadow-md">
+                        <div class="w-full sm:w-56 h-40 sm:h-auto bg-zinc-100 relative overflow-hidden">
+                            <div class="scanline z-20 mix-blend-overlay"></div>
+                            <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700" alt="Course">
+                            <div class="absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-transparent"></div>
+                            <div class="absolute top-3 left-3 z-10">
+                                <span class="px-2 py-1 bg-white/90 backdrop-blur-md text-zinc-900 text-[10px] font-bold rounded font-mono shadow-sm border border-zinc-200/50">HARDWARE</span>
+                            </div>
+                            <!-- Play Overlay -->
+                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 bg-black/10 backdrop-blur-[2px]">
+                                <div class="w-10 h-10 rounded-full bg-white text-zinc-900 shadow-lg flex items-center justify-center transform scale-90 group-hover:scale-100 transition-transform">
+                                    <i class="ph-fill ph-play"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 flex-1 flex flex-col justify-between relative bg-white/50">
+                            <div class="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <i class="ph ph-arrow-up-right text-acid text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg text-zinc-900 font-bold group-hover:text-acid-600 transition-colors tracking-tight">Advanced Hydraulics Systems</h3>
+                                <p class="text-sm text-zinc-500 mt-1 leading-relaxed">Master the principles of fluid power through hands-on simulation and diagnostic workflows.</p>
+                                <div class="flex items-center gap-3 mt-3">
+                                    <span class="text-[10px] text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 font-medium">Module 4: Valves</span>
+                                    <span class="text-[10px] text-zinc-400 flex items-center gap-1 font-medium"><i class="ph-fill ph-clock"></i> 2h 15m left</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-5">
+                                <div class="flex justify-between text-[10px] mb-2 font-mono uppercase tracking-wider">
+                                    <span class="text-zinc-500 font-semibold">Progress</span>
+                                    <span class="text-acid-600 font-bold">75%</span>
+                                </div>
+                                <div class="w-full bg-zinc-200 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-gradient-to-r from-acid to-acid h-full w-3/4 relative overflow-hidden">
+                                        <div class="progress-bar-shine"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Course Card 2 -->
+                    <div class="glass-card p-0 rounded-2xl flex flex-col sm:flex-row overflow-hidden group border border-zinc-200 hover:border-orange/50 shadow-sm hover:shadow-md">
+                        <div class="w-full sm:w-56 h-40 sm:h-auto bg-zinc-100 relative overflow-hidden">
+                            <div class="scanline z-20 mix-blend-overlay"></div>
+                            <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700" alt="Course">
+                            <div class="absolute top-3 left-3 z-10">
+                                <span class="px-2 py-1 bg-white/90 backdrop-blur-md text-orange text-[10px] font-bold rounded font-mono shadow-sm border border-zinc-200/50">SECURITY</span>
+                            </div>
+                             <!-- Play Overlay -->
+                             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 bg-black/10 backdrop-blur-[2px]">
+                                <div class="w-10 h-10 rounded-full bg-white text-orange shadow-lg flex items-center justify-center transform scale-90 group-hover:scale-100 transition-transform">
+                                    <i class="ph-fill ph-play"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 flex-1 flex flex-col justify-between relative bg-white/50">
+                            <div class="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <i class="ph ph-arrow-up-right text-orange text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg text-zinc-900 font-bold group-hover:text-orange transition-colors tracking-tight">ICS / SCADA Security</h3>
+                                <p class="text-sm text-zinc-500 mt-1 leading-relaxed">Identify vulnerabilities in industrial control systems and implement defense-in-depth.</p>
+                                <div class="flex items-center gap-3 mt-3">
+                                    <span class="text-[10px] text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 font-medium">Module 2: Network</span>
+                                    <span class="text-[10px] text-zinc-400 flex items-center gap-1 font-medium"><i class="ph-fill ph-clock"></i> 4h 30m left</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-5">
+                                <div class="flex justify-between text-[10px] mb-2 font-mono uppercase tracking-wider">
+                                    <span class="text-zinc-500 font-semibold">Progress</span>
+                                    <span class="text-orange font-bold">32%</span>
+                                </div>
+                                <div class="w-full bg-zinc-200 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-gradient-to-r from-orange/80 to-orange h-full w-[32%] relative overflow-hidden"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Activity -->
+                <div class="space-y-6 animate-fade-in-up delay-300">
+                    
+                    <!-- Activity Feed -->
+                    <div class="glass-panel p-6 rounded-2xl border-t border-zinc-200">
+                        <div class="flex items-center justify-between mb-6">
+                             <h3 class="text-xs font-bold text-zinc-900 font-mono uppercase tracking-widest flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 bg-acid rounded-full animate-pulse"></span> System Logs
+                             </h3>
+                             <i class="ph ph-sliders-horizontal text-zinc-400 hover:text-zinc-900 cursor-pointer transition-colors"></i>
+                        </div>
+                        
+                        <div class="space-y-6 relative">
+                            <!-- Dashed Timeline line -->
+                            <div class="absolute left-2.5 top-2 bottom-2 w-px border-l border-dashed border-zinc-300"></div>
+
+                            <div class="relative pl-8 group">
+                                <div class="absolute left-0 top-1 w-5 h-5 rounded-full bg-white border border-acid text-acid-600 flex items-center justify-center text-[10px] shadow-sm z-10">
+                                    <i class="ph-fill ph-check"></i>
+                                </div>
+                                <p class="text-sm text-zinc-600 group-hover:text-zinc-900 transition-colors">Completed <span class="text-zinc-900 font-bold">Safety Assessment</span></p>
+                                <span class="text-[10px] text-zinc-400 font-mono mt-0.5 block">10 MIN AGO // ID: 8821</span>
+                            </div>
+
+                            <div class="relative pl-8 group">
+                                <div class="absolute left-0 top-1 w-5 h-5 rounded-full bg-white border border-zinc-300 text-zinc-400 flex items-center justify-center text-[10px] group-hover:border-acid group-hover:text-acid-600 transition-colors z-10">
+                                    <i class="ph-fill ph-trophy"></i>
+                                </div>
+                                <p class="text-sm text-zinc-600 group-hover:text-zinc-900 transition-colors">New badge earned: <span class="text-acid-600 font-bold">Fast Learner</span></p>
+                                <span class="text-[10px] text-zinc-400 font-mono mt-0.5 block">2 HRS AGO // AUTOMATED</span>
+                            </div>
+
+                            <div class="relative pl-8 group">
+                                <div class="absolute left-0 top-1 w-5 h-5 rounded-full bg-white border border-zinc-300 text-zinc-400 flex items-center justify-center text-[10px] group-hover:border-acid group-hover:text-acid-600 transition-colors z-10">
+                                    <i class="ph-fill ph-terminal-window"></i>
+                                </div>
+                                <p class="text-sm text-zinc-600 group-hover:text-zinc-900 transition-colors">Terminal Session <span class="text-zinc-500 font-medium">#4429</span> closed</p>
+                                <span class="text-[10px] text-zinc-400 font-mono mt-0.5 block">YESTERDAY // 14:00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deadlines Widget -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex justify-between items-center mb-5">
+                            <h3 class="text-xs font-bold text-zinc-900 font-mono uppercase tracking-widest">Upcoming</h3>
+                            <button class="text-zinc-400 hover:text-zinc-900 transition-colors"><i class="ph ph-arrow-right"></i></button>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-4 p-3 hover:bg-zinc-100 rounded-xl cursor-pointer group transition-all border border-transparent hover:border-zinc-200">
+                                <div class="w-12 h-12 rounded-lg bg-zinc-50 flex flex-col items-center justify-center border border-zinc-200 group-hover:border-red-500/40 group-hover:bg-red-50 transition-all shadow-sm">
+                                    <span class="text-[9px] text-zinc-400 uppercase font-mono tracking-wider group-hover:text-red-500">Oct</span>
+                                    <span class="text-lg font-bold text-zinc-900 group-hover:text-red-600">24</span>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-zinc-800 font-bold group-hover:text-red-600 transition-colors">Final Exam: Robotics</p>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                                        <p class="text-[10px] text-red-500 font-mono tracking-wide font-bold">DUE 23:59</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-4 p-3 hover:bg-zinc-100 rounded-xl cursor-pointer group transition-all border border-transparent hover:border-zinc-200">
+                                <div class="w-12 h-12 rounded-lg bg-zinc-50 flex flex-col items-center justify-center border border-zinc-200 group-hover:border-zinc-300 transition-all shadow-sm">
+                                    <span class="text-[9px] text-zinc-400 uppercase font-mono tracking-wider">Oct</span>
+                                    <span class="text-lg font-bold text-zinc-900">28</span>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-zinc-800 font-bold">Lab Report 3</p>
+                                    <p class="text-[10px] text-zinc-400 font-mono tracking-wide mt-1 font-medium">3 DAYS LEFT</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="mt-12 mb-6 border-t border-zinc-200 pt-8 flex flex-col md:flex-row justify-between items-center text-[10px] text-zinc-400 font-mono uppercase tracking-widest animate-fade-in-up delay-400">
+                <p>APOLLO LEARNING OS <span class="text-zinc-600 font-bold">v2.4.1</span> // BUILD 9942</p>
+                <div class="flex gap-6 mt-4 md:mt-0">
+                    <a href="#" class="hover:text-zinc-900 transition-colors">SUPPORT</a>
+                    <a href="#" class="hover:text-zinc-900 transition-colors">LEGAL</a>
+                    <a href="#" class="hover:text-zinc-900 transition-colors flex items-center gap-2">
+                        STATUS: <span class="text-acid-600 font-bold">ONLINE</span>
+                    </a>
+                </div>
+            </footer>
+        </div>
+    </main>
+
+    <!-- AI Assistant Widget -->
+    <div class="fixed bottom-6 right-6 z-[60] flex flex-col items-end">
+        
+        <!-- Chat Interface (Restored to original comfortable size) -->
+        <div id="ai-chat-window" class="mb-4 w-[360px] h-[550px] bg-white rounded-2xl flex flex-col overflow-hidden transition-all duration-300 transform origin-bottom-right scale-95 opacity-0 pointer-events-none translate-y-4 border border-zinc-200 shadow-2xl">
+            <!-- Header -->
+            <div class="h-16 border-b border-zinc-100 bg-white flex items-center justify-between px-5 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-950 flex items-center justify-center shadow-md">
+                        <i class="ph-fill ph-sparkle text-acid text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-zinc-900">Apollo AI</h3>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-acid shadow-[0_0_8px_rgba(184,230,0,0.6)] animate-pulse"></span>
+                            <span class="text-[10px] text-zinc-500 font-mono tracking-wide">SYSTEM ONLINE</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1">
+                     <button class="w-8 h-8 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors flex items-center justify-center">
+                        <i class="ph ph-arrows-out-simple"></i>
+                    </button>
+                    <button onclick="toggleChat()" class="w-8 h-8 rounded-lg hover:bg-red-50 text-zinc-400 hover:text-red-500 transition-colors flex items-center justify-center">
+                        <i class="ph ph-x"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-5 font-sans text-sm scroll-smooth bg-zinc-50/50" id="chat-messages">
+                <!-- Date Separator -->
+                <div class="flex justify-center">
+                    <span class="text-[10px] font-mono text-zinc-400 bg-white px-2 py-1 rounded border border-zinc-200">TODAY, 11:30 AM</span>
+                </div>
+
+                <!-- System Message -->
+                <div class="flex gap-4 items-start animate-fade-in-up">
+                    <div class="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
+                        <i class="ph-fill ph-robot text-zinc-500 text-sm"></i>
+                    </div>
+                    <div class="flex flex-col gap-1 max-w-[85%]">
+                         <span class="text-[10px] text-zinc-400 font-bold ml-1">APOLLO</span>
+                        <div class="bg-white border border-zinc-100 p-3.5 rounded-2xl rounded-tl-none text-zinc-600 text-sm shadow-sm leading-relaxed">
+                            <p>Hello Alex. I've analyzed your progress in <span class="font-semibold text-zinc-800">Hydraulics Systems</span>. You have 2 pending modules.</p>
+                            <div class="mt-3 pt-3 border-t border-zinc-100 flex gap-2">
+                                <button class="text-[11px] bg-zinc-50 hover:bg-acid/10 hover:text-acid-700 hover:border-acid/20 border border-zinc-200 px-3 py-1.5 rounded-lg transition-colors font-medium">Resume Module</button>
+                                <button class="text-[11px] bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 px-3 py-1.5 rounded-lg transition-colors font-medium">Show Summary</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 bg-white border-t border-zinc-100">
+                <div class="relative">
+                    <input type="text" placeholder="Ask about courses, schedule, or content..." class="w-full bg-white border border-zinc-200 rounded-xl pl-4 pr-12 py-3.5 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-100 focus:border-zinc-300 shadow-sm transition-all font-medium">
+                    <button class="absolute right-2 top-2 p-1.5 bg-zinc-900 text-white rounded-lg hover:bg-acid hover:text-black transition-colors shadow-sm">
+                        <i class="ph-bold ph-paper-plane-right"></i>
+                    </button>
+                </div>
+                <div class="flex justify-center mt-2">
+                    <span class="text-[9px] text-zinc-400 font-medium flex items-center gap-1">
+                        <i class="ph-fill ph-lock-key"></i> Private & Secure Context
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAB (Made Smaller: w-10 h-10) -->
+        <button onclick="toggleChat()" id="ai-fab" class="group relative w-10 h-10 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:shadow-acid/20 border border-white/10 transition-all duration-300 hover:scale-105 active:scale-95 z-50">
+            <div class="absolute inset-0 rounded-xl border border-acid opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <i class="ph-fill ph-chat-teardrop-text text-lg group-hover:text-acid transition-colors"></i>
+            
+            <!-- Notification Dot (Smaller & Subtler) -->
+            <span class="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-acid opacity-30"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-acid border border-white"></span>
+            </span>
+        </button>
+    </div>
+
+    <script>
+        // Real-time Clock
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit'
+            });
+            const dateString = now.toLocaleDateString('en-US', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short'
+            });
+            document.getElementById('current-time').innerText = `${dateString.toUpperCase()} // ${timeString}`;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Mobile Sidebar Toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        // Active State Simulator
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                // e.preventDefault();
+                // Remove active class from all
+                document.querySelectorAll('.nav-item').forEach(nav => {
+                    nav.classList.remove('bg-zinc-100', 'border-zinc-200', 'text-zinc-900', 'shadow-sm');
+                    nav.classList.add('border-transparent', 'text-zinc-500');
+                    const icon = nav.querySelector('i');
+                    if(icon) icon.classList.remove('text-acid');
+                });
+
+                // Add active class to clicked
+                item.classList.remove('border-transparent', 'text-zinc-500');
+                item.classList.add('bg-zinc-100', 'border-zinc-200', 'text-zinc-900', 'shadow-sm');
+                const icon = item.querySelector('i');
+                if(icon) icon.classList.add('text-acid');
+            });
+        });
+
+        // Chat Toggle Logic
+        function toggleChat() {
+            const chatWindow = document.getElementById('ai-chat-window');
+            const isHidden = chatWindow.classList.contains('opacity-0');
+            
+            if (isHidden) {
+                chatWindow.classList.remove('opacity-0', 'pointer-events-none', 'scale-95', 'translate-y-4');
+                // Focus input when opened
+                chatWindow.querySelector('input').focus();
+            } else {
+                chatWindow.classList.add('opacity-0', 'pointer-events-none', 'scale-95', 'translate-y-4');
+            }
+        }
+    </script>
+</body>
+</html>

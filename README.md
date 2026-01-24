@@ -2,19 +2,22 @@
 Apollo is a course marketplace where instructors publish structured learning experiences and students discover, purchase, and complete courses.
 
 ## Status
-Pivot in progress. Marketplace foundations are in place (public landing page, instructor role, and course marketplace fields) while legacy LMS features remain during the transition.
+Pivot in progress. Marketplace foundations, moderation, and student learning flows are in place. The UI has been refreshed to the industrial design system, while legacy LMS features remain during the transition.
 
 ## Key Capabilities (Current)
 - Public landing page and catalog (approved courses only)
 - Authentication with roles: admin, instructor, student
-- Course CRUD with marketplace fields (title, category, price, status)
-- Seeded sample course: Data Structures
+- Course CRUD with marketplace fields (title, category, price, status) + moderation
+- Stripe checkout for course purchase + enrollment creation
+- Student learning: course detail, course player, lesson progress tracking
+- Unified industrial UI across student/instructor/admin dashboards and auth screens
+- Seeded sample course: Data Structures & Algorithms
 
 ## Planned (SDS/SRS)
-- Instructor course builder with video uploads
-- Admin moderation workflow (approve/reject)
-- Stripe checkout per course
-- Student progress tracking, quizzes, certificates
+- Instructor course builder for sections/lessons + video uploads
+- Expanded quizzes/certificates
+- AI assistant integration (currently UI-only)
+- Legacy LMS cleanup
 
 ## Documents
 - `Project Documents /Apollo_SRS_v1.0.docx` (note: directory name includes a trailing space)
@@ -32,6 +35,7 @@ Pivot in progress. Marketplace foundations are in place (public landing page, in
 Project_Apollo/
 ├── backend/          # Express API server
 ├── frontend/         # React application
+├── agent_comunication/ # Pivot plans + project status
 ├── Project Documents /  # SRS/SDS docs (directory has trailing space)
 └── PROJECT_APOLLO_CONTEXT.md
 ```
@@ -77,7 +81,9 @@ npm run dev
 5. Access the app:
 - Landing page: http://localhost:5173/
 - Dashboard (auth required): http://localhost:5173/dashboard
-- Backend API: http://localhost:5001/health
+- Backend API: http://localhost:5000/health (override with `PORT` in `backend/.env`)
+
+Note: if port 5000 is in use, set `PORT` in `backend/.env` and update `VITE_API_URL` in `frontend/.env`.
 
 ## Seeded Accounts
 Defaults (override via env if needed):

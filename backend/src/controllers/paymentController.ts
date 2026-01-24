@@ -1,13 +1,37 @@
 import { Request, Response, NextFunction } from 'express';
 import Stripe from 'stripe';
 import { AuthenticatedRequest } from '../types/auth';
-import { getEnrollmentById, updateEnrollmentPaymentStatus } from '../models/enrollmentModel';
-import { constructStripeEvent, createPaymentIntent } from '../services/stripeService';
-import { createTransaction, updateTransactionStatusByStripeId } from '../models/transactionModel';
+import {
+  createEnrollment,
+  getEnrollmentById,
+  getEnrollmentByStudentAndCourse,
+  updateEnrollmentPaymentStatus
+} from '../models/enrollmentModel';
+import { getCourseById } from '../models/courseModel';
+import { findUserById } from '../models/userModel';
+import {
+  constructStripeEvent,
+  createPaymentIntent,
+  createCheckoutSession
+} from '../services/stripeService';
+import {
+  createTransaction,
+  findTransactionByStripePaymentId,
+  updateTransactionStatusByStripeId
+} from '../models/transactionModel';
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const CHECKOUT_SUCCESS_URL =
+  process.env.STRIPE_CHECKOUT_SUCCESS_URL || `${FRONTEND_URL}/dashboard?checkout=success`;
+const CHECKOUT_CANCEL_URL =
+  process.env.STRIPE_CHECKOUT_CANCEL_URL || `${FRONTEND_URL}/dashboard?checkout=cancel`;
 
 const toCents = (amount: number): number => Math.round(amount * 100);
 const toDollars = (amountCents: number): number => Math.round(amountCents) / 100;
-const parseMetadataNumber = (metadata: Stripe.Metadata | undefined, key: string): number | null => {
+const parseMetadataNumber = (
+  metadata: Stripe.Metadata | null | undefined,
+  key: string
+): number | null => {
   if (!metadata) {
     return null;
   }
@@ -84,10 +108,159 @@ export const createPaymentIntentHandler = async (
   }
 };
 
+export const createCheckoutSessionHandler = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (user.role !== 'student' && user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only students or admins can create checkouts' });
+    }
+
+    const courseId = Number(req.body.courseId);
+    if (!courseId || !Number.isFinite(courseId)) {
+      return res.status(400).json({ error: 'courseId is required' });
+    }
+
+    const studentId =
+      user.role === 'admin' && req.body.student_id
+        ? Number(req.body.student_id)
+        : user.sub;
+
+    if (!Number.isFinite(studentId)) {
+      return res.status(400).json({ error: 'Invalid student_id' });
+    }
+
+    const course = await getCourseById(courseId);
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    if (course.status !== 'approved') {
+      return res.status(400).json({ error: 'Course is not available for purchase' });
+    }
+
+    const existingEnrollment = await getEnrollmentByStudentAndCourse(studentId, courseId);
+    if (existingEnrollment) {
+      return res.status(409).json({ error: 'Already enrolled in this course' });
+    }
+
+    const price = course.price ?? 0;
+
+    if (price === 0) {
+      const enrollment = await createEnrollment({
+        student_id: studentId,
+        course_id: courseId,
+        tuition_amount: 0,
+        payment_status: 'paid'
+      });
+      return res.status(201).json({ enrollment, checkout: null });
+    }
+
+    const amountCents = toCents(price);
+
+    let customerEmail: string | undefined = user.email;
+    if (user.role === 'admin' && studentId !== user.sub) {
+      const student = await findUserById(studentId);
+      if (!student) {
+        return res.status(400).json({ error: 'Invalid student_id: user not found' });
+      }
+      if (student.role !== 'student') {
+        return res.status(400).json({ error: 'Invalid student_id: user is not a student' });
+      }
+      customerEmail = student.email;
+    }
+
+    const session = await createCheckoutSession({
+      amountCents,
+      courseId,
+      courseTitle: course.title || 'Course',
+      studentId,
+      customerEmail: customerEmail || '',
+      successUrl: CHECKOUT_SUCCESS_URL,
+      cancelUrl: CHECKOUT_CANCEL_URL
+    });
+
+    return res.status(201).json({
+      checkout: {
+        id: session.id,
+        url: session.url
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const paymentWebhookHandler = async (req: Request, res: Response) => {
   try {
     const signature = req.headers['stripe-signature'];
     const event = constructStripeEvent(req.body as Buffer, signature);
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const courseId = parseMetadataNumber(session.metadata, 'course_id');
+      const studentId = parseMetadataNumber(session.metadata, 'student_id');
+      const paymentIntentId =
+        typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : session.payment_intent?.id ?? null;
+
+      if (courseId === null || studentId === null) {
+        console.error('Missing metadata in checkout session:', session.id);
+        return res.json({ received: true });
+      }
+
+      const existingEnrollment = await getEnrollmentByStudentAndCourse(studentId, courseId);
+      if (existingEnrollment) {
+        return res.json({ received: true, message: 'Already enrolled' });
+      }
+
+      const course = await getCourseById(courseId);
+      const amountDollars = session.amount_total ? toDollars(session.amount_total) : (course?.price ?? 0);
+
+      let transactionCreated = false;
+      if (paymentIntentId) {
+        const existingTransaction = await findTransactionByStripePaymentId(paymentIntentId);
+        if (!existingTransaction) {
+          await createTransaction({
+            student_id: studentId,
+            amount: amountDollars,
+            type: 'payment',
+            stripe_payment_id: paymentIntentId,
+            status: 'completed',
+            description: `Course purchase: ${course?.title || 'Course'}`
+          });
+          transactionCreated = true;
+        }
+      } else {
+        await createTransaction({
+          student_id: studentId,
+          amount: amountDollars,
+          type: 'payment',
+          stripe_payment_id: null,
+          status: 'completed',
+          description: `Course purchase: ${course?.title || 'Course'}`
+        });
+        transactionCreated = true;
+      }
+
+      await createEnrollment({
+        student_id: studentId,
+        course_id: courseId,
+        tuition_amount: amountDollars,
+        payment_status: 'paid'
+      });
+
+      return res.json({ received: true, transactionCreated });
+    }
 
     if (event.type === 'payment_intent.succeeded') {
       const intent = event.data.object as Stripe.PaymentIntent;

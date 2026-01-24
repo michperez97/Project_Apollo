@@ -43,126 +43,98 @@ const LandingPage = () => {
   const catalog = useMemo(() => courses.slice(0, 6), [courses]);
 
   return (
-    <div className="apollo-landing min-h-screen">
-      <div className="relative overflow-hidden">
-        <div className="absolute -top-32 -right-24 h-96 w-96 rounded-full bg-amber-200/40 blur-3xl" />
-        <div className="absolute -bottom-40 left-10 h-96 w-96 rounded-full bg-sky-200/50 blur-3xl" />
-
-        <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-8">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-semibold">
-              A
+    <div className="min-h-screen">
+      <div className="relative z-10">
+        <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 md:px-10 py-6">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center shadow-inner">
+              <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24">
+                <path d="M12 2L4 22h3.5l1.5-4h6l1.5 4H20L12 2zm0 5.5L14 15h-4l2-7.5z" />
+              </svg>
             </div>
             <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Apollo</p>
-              <p className="text-lg font-semibold text-slate-900">Course Platform</p>
+              <p className="txt-label">Apollo</p>
+              <p className="text-sm font-semibold text-zinc-700">Course Platform</p>
             </div>
-          </div>
-          <nav className="flex items-center gap-3 text-sm">
-            <a className="px-3 py-2 text-slate-600 hover:text-slate-900" href="#catalog">
-              Catalog
-            </a>
-            <Link className="px-3 py-2 text-slate-600 hover:text-slate-900" to="/login">
-              Sign in
-            </Link>
-            <Link
-              className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/20"
-              to="/register"
-            >
-              Create account
-            </Link>
+          </Link>
+          <nav className="flex items-center gap-2 text-sm">
+            <a href="#catalog" className="btn-secondary text-sm">Catalog</a>
+            <Link className="btn-secondary text-sm" to="/login">Sign in</Link>
+            <Link className="btn-primary text-sm" to="/register">Create account</Link>
           </nav>
         </header>
 
-        <main className="relative z-10 mx-auto w-full max-w-6xl px-6 pb-16">
-          <section className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+        <main className="mx-auto w-full max-w-6xl px-6 md:px-10 pb-16">
+          <section className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] items-center">
             <div className="space-y-6">
-              <p className="apollo-chip inline-flex items-center gap-2 text-xs uppercase tracking-[0.3em]">
-                New semester, new mastery
-              </p>
-              <h1 className="apollo-hero-title text-4xl font-semibold leading-tight text-slate-900 sm:text-5xl lg:text-6xl">
-                Build serious skills with focused, instructor-led courses.
+              <span className="txt-label inline-flex items-center gap-2">
+                HUMAN INDUSTRIAL TRAINING
+              </span>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-zinc-900 tracking-tight">
+                Industrial-grade learning, built for real operators.
               </h1>
-              <p className="text-lg text-slate-600 max-w-xl">
-                Apollo is a marketplace for modern course creators. Learn with structured lessons, crisp
-                feedback, and progress tracking that keeps you moving.
+              <p className="text-lg text-zinc-600 max-w-xl">
+                Apollo delivers focused, instructor-led courses with clear progress tracking and practical outcomes. No fluff, just structured learning.
               </p>
-              <div className="flex flex-wrap items-center gap-4">
-                <a
-                  className="rounded-full bg-amber-500 px-6 py-3 text-sm font-semibold text-slate-900 shadow-lg shadow-amber-500/30"
-                  href="#catalog"
-                >
-                  Explore courses
-                </a>
-                <Link
-                  className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700"
-                  to="/register"
-                >
-                  Become an instructor
-                </Link>
+              <div className="flex flex-wrap items-center gap-3">
+                <a href="#catalog" className="btn-primary">Explore courses</a>
+                <Link className="btn-secondary" to="/register">Become an instructor</Link>
               </div>
-              <div className="flex flex-wrap gap-6 pt-4 text-sm text-slate-600">
-                <div>
-                  <p className="text-2xl font-semibold text-slate-900">12k+</p>
-                  <p>active learners</p>
+              <div className="grid grid-cols-3 gap-4 pt-4">
+                <div className="glass-card p-4 rounded-2xl">
+                  <p className="txt-label">Active Learners</p>
+                  <p className="text-2xl font-bold text-zinc-900 font-mono">12K+</p>
                 </div>
-                <div>
-                  <p className="text-2xl font-semibold text-slate-900">45+</p>
-                  <p>expert instructors</p>
+                <div className="glass-card p-4 rounded-2xl">
+                  <p className="txt-label">Completion Rate</p>
+                  <p className="text-2xl font-bold text-zinc-900 font-mono">96%</p>
                 </div>
-                <div>
-                  <p className="text-2xl font-semibold text-slate-900">96%</p>
-                  <p>completion rate</p>
+                <div className="glass-card p-4 rounded-2xl">
+                  <p className="txt-label">Instructors</p>
+                  <p className="text-2xl font-bold text-zinc-900 font-mono">45+</p>
                 </div>
               </div>
             </div>
 
-            <div className="relative">
-              <div className="apollo-card animate-[apollo-fade-up_0.8s_ease-out_both]">
-                <div className="mb-4 flex items-center justify-between">
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Featured
-                  </span>
-                  <span className="text-xs text-slate-500">Updated weekly</span>
-                </div>
-                {featured ? (
-                  <>
-                    <h2 className="text-2xl font-semibold text-slate-900">
-                      {resolveTitle(featured)}
-                    </h2>
-                    <p className="mt-2 text-sm text-slate-600">{resolveDescription(featured)}</p>
-                    <div className="mt-4 flex items-center justify-between">
-                      <span className="text-sm text-slate-500">{resolveCategory(featured)}</span>
-                      <span className="text-lg font-semibold text-slate-900">
-                        {formatPrice(featured.price)}
-                      </span>
-                    </div>
-                    <div className="mt-6 flex items-center gap-3">
-                      <Link
-                        className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white"
-                        to="/login"
-                      >
-                        Enroll now
-                      </Link>
-                      <Link className="text-sm font-semibold text-slate-700" to="/login">
-                        Preview syllabus
-                      </Link>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-sm text-slate-500">No featured course yet.</p>
-                )}
+            <div className="glass-card p-6 rounded-2xl shadow-floating">
+              <div className="flex items-center justify-between">
+                <span className="txt-label">Featured</span>
+                <span className="txt-label">Updated weekly</span>
               </div>
+              {featured ? (
+                <>
+                  <h2 className="text-2xl font-bold text-zinc-900 mt-4">
+                    {resolveTitle(featured)}
+                  </h2>
+                  <p className="mt-2 text-sm text-zinc-600">{resolveDescription(featured)}</p>
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className="txt-label">{resolveCategory(featured)}</span>
+                    <span className="text-lg font-bold text-zinc-900 font-mono">
+                      {formatPrice(featured.price)}
+                    </span>
+                  </div>
+                  <div className="mt-6 flex items-center gap-3">
+                    <Link className="btn-primary text-sm" to={`/course/${featured.id}`}>
+                      Enroll now
+                    </Link>
+                    <Link className="btn-secondary text-sm" to={`/course/${featured.id}`}>
+                      Preview syllabus
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-zinc-500 mt-4">No featured course yet.</p>
+              )}
             </div>
           </section>
 
           <section id="catalog" className="mt-16">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Catalog</p>
-                <h2 className="text-3xl font-semibold text-slate-900">Start with what matters</h2>
+                <p className="txt-label">Catalog</p>
+                <h2 className="text-3xl font-bold text-zinc-900">Start with what matters</h2>
               </div>
-              <Link className="text-sm font-semibold text-slate-700" to="/register">
+              <Link className="btn-secondary text-sm" to="/register">
                 Launch your own course →
               </Link>
             </div>
@@ -183,32 +155,44 @@ const LandingPage = () => {
               )}
 
               {!loading &&
-                catalog.map((course, index) => (
-                  <div
-                    key={course.id}
-                    className="apollo-course-card animate-[apollo-fade-up_0.7s_ease-out_both]"
-                    style={{ animationDelay: `${120 + index * 80}ms` }}
-                  >
-                    <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-slate-400">
+                catalog.map((course) => (
+                  <div key={course.id} className="glass-card p-5 rounded-2xl group">
+                    <div className="flex items-center justify-between text-xs uppercase tracking-wider text-zinc-500 font-mono">
                       <span>{resolveCategory(course)}</span>
-                      <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-700">
+                      <span className="px-2 py-1 rounded-full bg-acid/30 text-zinc-700 font-semibold">
                         {formatPrice(course.price)}
                       </span>
                     </div>
-                    <h3 className="mt-4 text-xl font-semibold text-slate-900">
+                    <h3 className="mt-4 text-xl font-bold text-zinc-900 group-hover:text-lime-600 transition-colors">
                       {resolveTitle(course)}
                     </h3>
-                    <p className="mt-2 text-sm text-slate-600">{resolveDescription(course)}</p>
-                    <div className="mt-6 flex items-center justify-between">
-                      <span className="text-xs text-slate-500">8 lessons • 2h 40m</span>
-                      <Link className="text-sm font-semibold text-slate-700" to="/login">
-                        View course →
+                    <p className="mt-2 text-sm text-zinc-500 line-clamp-2">
+                      {resolveDescription(course)}
+                    </p>
+                    <div className="mt-4 flex items-center justify-between">
+                      <Link
+                        className="text-sm font-semibold text-zinc-700 hover:text-lime-600 transition-colors"
+                        to={`/course/${course.id}`}
+                      >
+                        View syllabus
+                      </Link>
+                      <Link className="btn-accent text-xs" to={`/course/${course.id}`}>
+                        Enroll
                       </Link>
                     </div>
                   </div>
                 ))}
             </div>
           </section>
+
+          <footer className="mt-16 border-t border-zinc-200 pt-8 flex flex-col md:flex-row justify-between items-center txt-label">
+            <p>APOLLO COURSE MARKETPLACE <span className="text-zinc-600 font-bold">v2.0</span></p>
+            <div className="flex gap-6 mt-4 md:mt-0">
+              <span className="flex items-center gap-2">
+                STATUS: <span className="text-emerald-600 font-bold">ONLINE</span>
+              </span>
+            </div>
+          </footer>
         </main>
       </div>
     </div>
