@@ -141,7 +141,7 @@ const CourseDetailPage = () => {
                 <div className="panel-technical p-3">
                   <p className="txt-label">Price</p>
                   <p className="font-mono text-lg text-zinc-900">
-                    {course.price == null || course.price === 0 ? 'Free' : `$${course.price.toFixed(0)}`}
+                    {course.price == null || Number(course.price) === 0 ? 'Free' : `$${Number(course.price).toFixed(0)}`}
                   </p>
                 </div>
                 <div className="panel-technical p-3">
