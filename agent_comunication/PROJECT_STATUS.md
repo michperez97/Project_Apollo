@@ -99,3 +99,10 @@ Next Actions
 - Ensure migrations 016-018 are applied in new environments.
 - Start Step 7: legacy LMS cleanup.
 - Expand instructor authoring for sections/lessons when ready.
+
+This Week - Assigned Tasks
+- Andy Alonso: Instructor course builder UI (sections/lessons, reordering, media upload flow).
+- Bryan Cabrera: Backend section/lesson CRUD endpoints (controllers + routes) and connect to existing models.
+- Michel Perez: AI assistant integration beyond UI placeholder + email notifications (purchase/enrollment/course updates).
+- Angie Quitian Moya: Quizzes/assessments + certificates (data model, API, UI).
+- Richard Reyes: Legacy LMS cleanup (remove old pages/services/routes, drop legacy tables/columns, update seeds).
