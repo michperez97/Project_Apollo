@@ -123,10 +123,20 @@ export const deleteCourseHandler = async (
 ) => {
   try {
     const courseId = Number(req.params.id);
-    const deleted = await deleteCourse(courseId);
-    if (!deleted) {
+    if (!Number.isFinite(courseId)) {
+      return res.status(400).json({ error: 'Invalid course id' });
+    }
+
+    const course = await getCourseById(courseId);
+    if (!course) {
       return res.status(404).json({ error: 'Course not found' });
     }
+
+    if (req.user?.role === 'instructor' && course.instructor_id !== req.user.sub) {
+      return res.status(403).json({ error: 'You do not own this course' });
+    }
+
+    await deleteCourse(courseId);
     return res.status(204).send();
   } catch (error) {
     return next(error);

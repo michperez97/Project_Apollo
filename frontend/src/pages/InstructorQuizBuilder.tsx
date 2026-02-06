@@ -174,15 +174,24 @@ const InstructorQuizBuilder = () => {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <Link
-              to="/instructor/courses"
-              className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-900 mb-2 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Courses
-            </Link>
+            <div className="flex items-center gap-4 mb-2">
+              <Link
+                to="/instructor/courses"
+                className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-900 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Courses
+              </Link>
+              <span className="text-zinc-300">/</span>
+              <Link
+                to={`/instructor/courses/${courseId}/builder`}
+                className="text-zinc-600 hover:text-zinc-900 transition-colors"
+              >
+                Builder
+              </Link>
+            </div>
             <h1 className="text-2xl font-bold text-zinc-900">Quiz Management</h1>
           </div>
           {!showQuizForm && !showQuestionForm && (
