@@ -11,6 +11,9 @@ import AdminModerationQueue from './pages/AdminModerationQueue';
 import CourseDetailPage from './pages/CourseDetailPage';
 import CoursePlayerPage from './pages/CoursePlayerPage';
 import StudentDashboardPage from './pages/StudentDashboardPage';
+import QuizPage from './pages/QuizPage';
+import CertificatePage from './pages/CertificatePage';
+import InstructorQuizBuilder from './pages/InstructorQuizBuilder';
 
 const App = () => {
   return (
@@ -52,6 +55,22 @@ const App = () => {
         }
       />
       <Route
+        path="/quiz/:quizId"
+        element={
+          <ProtectedRoute>
+            <QuizPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/certificate/:certificateId"
+        element={
+          <ProtectedRoute>
+            <CertificatePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/finance"
         element={
           <ProtectedRoute>
@@ -64,6 +83,14 @@ const App = () => {
         element={
           <ProtectedRoute>
             <InstructorCoursesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/instructor/courses/:courseId/quizzes"
+        element={
+          <ProtectedRoute>
+            <InstructorQuizBuilder />
           </ProtectedRoute>
         }
       />
