@@ -42,33 +42,24 @@ const InstructorCoursesPage = () => {
   const [submitting, setSubmitting] = useState<number | null>(null);
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      console.log('InstructorCoursesPage: No user found');
-      return;
-    }
-
-    console.log('InstructorCoursesPage: User role:', user.role);
+    if (!user) return;
 
     if (user.role !== 'instructor' && user.role !== 'admin') {
-      console.log('InstructorCoursesPage: User is not instructor/admin, redirecting');
       setError('Access denied. You must be an instructor or admin.');
       setTimeout(() => navigate('/dashboard'), 2000);
       return;
     }
 
     const load = async () => {
-      console.log('InstructorCoursesPage: Loading courses...');
       setLoading(true);
       setError(null);
       try {
         const data = await courseApi.getInstructorCourses();
-        console.log('InstructorCoursesPage: Courses loaded:', data);
         setCourses(data);
-      } catch (err) {
-
-
+      } catch {
         setError('Failed to load courses.');
       } finally {
         setLoading(false);
@@ -87,8 +78,7 @@ const InstructorCoursesPage = () => {
       const url = await uploadFile(file, 'course-thumbnails');
       setCourseForm((prev) => ({ ...prev, thumbnail_url: url }));
       setSuccess('Thumbnail uploaded successfully');
-    } catch (err) {
-
+    } catch {
       setError('Failed to upload thumbnail.');
     } finally {
       setUploadingThumbnail(false);
@@ -142,8 +132,8 @@ const InstructorCoursesPage = () => {
         setSuccess('Course created successfully');
       }
       setCourseForm(defaultCourseForm);
-    } catch (err) {
-
+      setShowModal(false);
+    } catch {
       setError(editingCourse ? 'Failed to update course.' : 'Failed to create course.');
     } finally {
       setSaving(false);
@@ -160,11 +150,13 @@ const InstructorCoursesPage = () => {
       thumbnail_url: course.thumbnail_url || '',
       instructor_id: course.instructor_id ? String(course.instructor_id) : ''
     });
+    setShowModal(true);
   };
 
-  const handleCancelEdit = () => {
+  const handleCancelModal = () => {
     setEditingCourse(null);
     setCourseForm(defaultCourseForm);
+    setShowModal(false);
   };
 
   const handleSubmitForReview = async (courseId: number) => {
@@ -175,8 +167,7 @@ const InstructorCoursesPage = () => {
       const updated = await courseApi.submitCourse(courseId);
       setCourses((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
       setSuccess('Course submitted for review');
-    } catch (err) {
-
+    } catch {
       setError('Failed to submit course for review.');
     } finally {
       setSubmitting(null);
@@ -275,6 +266,12 @@ const InstructorCoursesPage = () => {
           </div>
 
           <div className="flex items-center gap-3 animate-fade-in-up delay-100 pointer-events-auto">
+            <button
+              className="btn-primary text-sm"
+              onClick={() => { setEditingCourse(null); setCourseForm(defaultCourseForm); setShowModal(true); }}
+            >
+              Create Course
+            </button>
             <Link to="/dashboard" className="btn-secondary text-sm">
               Dashboard
             </Link>
@@ -348,177 +345,87 @@ const InstructorCoursesPage = () => {
                 </div>
               </div>
 
-              {/* Content Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Course Form */}
-                <div className="lg:col-span-1 animate-fade-in-up delay-200">
-                  <div className="glass-card p-6 rounded-2xl">
-                    <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 bg-acid rounded-full" />
-                      {editingCourse ? 'Edit Course' : 'Create Course'}
-                    </h3>
-                    <form className="space-y-4" onSubmit={handleCreateOrUpdate}>
-                      <div>
-                        <label className="txt-label mb-1 block">Title</label>
-                        <input
-                          className="input"
-                          value={courseForm.title}
-                          onChange={(e) => setCourseForm((p) => ({ ...p, title: e.target.value }))}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="txt-label mb-1 block">Category</label>
-                        <input
-                          className="input"
-                          value={courseForm.category}
-                          onChange={(e) => setCourseForm((p) => ({ ...p, category: e.target.value }))}
-                          placeholder="e.g., Programming"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="txt-label mb-1 block">Price ($)</label>
-                        <input
-                          className="input"
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={courseForm.price}
-                          onChange={(e) => setCourseForm((p) => ({ ...p, price: Number(e.target.value) }))}
-                          required
-                        />
-                      </div>
-                      {user?.role === 'admin' && (
-                        <div>
-                          <label className="txt-label mb-1 block">Instructor ID</label>
-                          <input
-                            className="input"
-                            type="number"
-                            min={1}
-                            value={courseForm.instructor_id}
-                            onChange={(e) => setCourseForm((p) => ({ ...p, instructor_id: e.target.value }))}
-                            required
-                          />
-                        </div>
-                      )}
-                      <div>
-                        <label className="txt-label mb-1 block">Description</label>
-                        <textarea
-                          className="input min-h-[100px]"
-                          value={courseForm.description}
-                          onChange={(e) => setCourseForm((p) => ({ ...p, description: e.target.value }))}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="txt-label mb-1 block">Thumbnail</label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleThumbnailUpload}
-                          disabled={uploadingThumbnail}
-                          className="text-sm text-zinc-600"
-                        />
-                        {uploadingThumbnail && <span className="text-xs text-zinc-500 mt-1 block">Uploading...</span>}
-                        {courseForm.thumbnail_url && (
-                          <img
-                            src={courseForm.thumbnail_url}
-                            alt="Preview"
-                            className="mt-2 h-20 w-auto rounded border border-zinc-200"
-                          />
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <button className="btn-primary flex-1" type="submit" disabled={saving || uploadingThumbnail}>
-                          {saving ? 'Saving...' : editingCourse ? 'Update' : 'Create'}
-                        </button>
-                        {editingCourse && (
-                          <button type="button" className="btn-secondary" onClick={handleCancelEdit}>
-                            Cancel
-                          </button>
-                        )}
-                      </div>
-                    </form>
-                  </div>
+              {/* Full-width Course List */}
+              <div className="animate-fade-in-up delay-300">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-zinc-900 font-bold flex items-center gap-3 text-lg">
+                    <svg className="w-5 h-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
+                    </svg>
+                    Your Courses
+                  </h2>
+                  <span className="txt-label">{courses.length} Total</span>
                 </div>
 
-                {/* Course List */}
-                <div className="lg:col-span-2 animate-fade-in-up delay-300">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-zinc-900 font-bold flex items-center gap-3 text-lg">
-                      <svg className="w-5 h-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
-                      </svg>
-                      Your Courses
-                    </h2>
-                    <span className="txt-label">{courses.length} Total</span>
-                  </div>
-
-                  <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                    {courses.map((course) => (
-                      <div
-                        key={course.id}
-                        className="glass-card p-0 rounded-2xl flex flex-col sm:flex-row overflow-hidden group"
-                      >
-                        {course.thumbnail_url ? (
-                          <img
-                            src={course.thumbnail_url}
-                            alt={course.title}
-                            className="w-full sm:w-40 h-28 object-cover"
-                          />
-                        ) : (
-                          <div className="w-full sm:w-40 h-28 bg-zinc-100 flex items-center justify-center">
-                            <span className="txt-label">{course.category}</span>
+                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                  {courses.map((course) => (
+                    <div
+                      key={course.id}
+                      className="glass-card p-0 rounded-2xl flex flex-col sm:flex-row overflow-hidden group"
+                    >
+                      {course.thumbnail_url ? (
+                        <img
+                          src={course.thumbnail_url}
+                          alt={course.title}
+                          className="w-full sm:w-40 h-28 object-cover"
+                        />
+                      ) : (
+                        <div className="w-full sm:w-40 h-28 bg-zinc-100 flex items-center justify-center">
+                          <span className="txt-label">{course.category}</span>
+                        </div>
+                      )}
+                      <div className="p-4 flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="text-base text-zinc-900 font-bold tracking-tight">{course.title}</h3>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusBadgeClass(course.status)}`}>
+                              {course.status}
+                            </span>
                           </div>
-                        )}
-                        <div className="p-4 flex-1 flex flex-col justify-between">
-                          <div>
-                            <div className="flex items-start justify-between gap-2">
-                              <h3 className="text-base text-zinc-900 font-bold tracking-tight">{course.title}</h3>
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusBadgeClass(course.status)}`}>
-                                {course.status}
-                              </span>
-                            </div>
-                            <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{course.description}</p>
-                            <p className="text-sm font-semibold text-zinc-900 mt-2 font-mono">
-                              {course.price == null || Number(course.price) === 0 ? 'Free' : `$${Number(course.price).toFixed(0)}`}
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap gap-2 mt-3">
+                          <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{course.description}</p>
+                          <p className="text-sm font-semibold text-zinc-900 mt-2 font-mono">
+                            {course.price == null || Number(course.price) === 0 ? 'Free' : `$${Number(course.price).toFixed(0)}`}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <button
+                            className="btn-secondary text-xs py-1.5"
+                            onClick={() => handleEdit(course)}
+                          >
+                            Edit
+                          </button>
+                          <Link
+                            to={`/instructor/courses/${course.id}/builder`}
+                            className="btn-secondary text-xs py-1.5"
+                          >
+                            Manage Content
+                          </Link>
+                          <Link
+                            to={`/instructor/courses/${course.id}/quizzes`}
+                            className="btn-secondary text-xs py-1.5"
+                          >
+                            Manage Quizzes
+                          </Link>
+                          {(course.status === 'draft' || course.status === 'rejected') && (
                             <button
-                              className="btn-secondary text-xs py-1.5"
-                              onClick={() => handleEdit(course)}
+                              className="btn-accent text-xs py-1.5"
+                              onClick={() => handleSubmitForReview(course.id)}
+                              disabled={submitting === course.id}
                             >
-                              Edit
+                              {submitting === course.id ? 'Submitting...' : 'Submit for Review'}
                             </button>
-                            <Link
-                              to={`/instructor/courses/${course.id}/quizzes`}
-                              className="btn-secondary text-xs py-1.5"
-                            >
-                              Manage Quizzes
-                            </Link>
-                            {(course.status === 'draft' || course.status === 'rejected') && (
-                              <button
-                                className="btn-accent text-xs py-1.5"
-                                onClick={() => handleSubmitForReview(course.id)}
-                                disabled={submitting === course.id}
-                              >
-                                {submitting === course.id ? 'Submitting...' : 'Submit for Review'}
-                              </button>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
-                    ))}
-                    {!courses.length && (
-                      <EmptyState
-                        icon="books"
-                        title="No courses yet"
-                        description="Create your first course to get started"
-                      />
-                    )}
-                  </div>
+                    </div>
+                  ))}
+                  {!courses.length && (
+                    <EmptyState
+                      icon="books"
+                      title="No courses yet"
+                      description="Create your first course to get started"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -535,6 +442,102 @@ const InstructorCoursesPage = () => {
           )}
         </div>
       </main>
+
+      {/* Course Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCancelModal} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-acid rounded-full" />
+                {editingCourse ? 'Edit Course' : 'Create Course'}
+              </h3>
+              <form className="space-y-4" onSubmit={handleCreateOrUpdate}>
+                <div>
+                  <label className="txt-label mb-1 block">Title</label>
+                  <input
+                    className="input"
+                    value={courseForm.title}
+                    onChange={(e) => setCourseForm((p) => ({ ...p, title: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="txt-label mb-1 block">Category</label>
+                  <input
+                    className="input"
+                    value={courseForm.category}
+                    onChange={(e) => setCourseForm((p) => ({ ...p, category: e.target.value }))}
+                    placeholder="e.g., Programming"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="txt-label mb-1 block">Price ($)</label>
+                  <input
+                    className="input"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={courseForm.price}
+                    onChange={(e) => setCourseForm((p) => ({ ...p, price: Number(e.target.value) }))}
+                    required
+                  />
+                </div>
+                {user?.role === 'admin' && (
+                  <div>
+                    <label className="txt-label mb-1 block">Instructor ID</label>
+                    <input
+                      className="input"
+                      type="number"
+                      min={1}
+                      value={courseForm.instructor_id}
+                      onChange={(e) => setCourseForm((p) => ({ ...p, instructor_id: e.target.value }))}
+                      required
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="txt-label mb-1 block">Description</label>
+                  <textarea
+                    className="input min-h-[100px]"
+                    value={courseForm.description}
+                    onChange={(e) => setCourseForm((p) => ({ ...p, description: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="txt-label mb-1 block">Thumbnail</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleThumbnailUpload}
+                    disabled={uploadingThumbnail}
+                    className="text-sm text-zinc-600"
+                  />
+                  {uploadingThumbnail && <span className="text-xs text-zinc-500 mt-1 block">Uploading...</span>}
+                  {courseForm.thumbnail_url && (
+                    <img
+                      src={courseForm.thumbnail_url}
+                      alt="Preview"
+                      className="mt-2 h-20 w-auto rounded border border-zinc-200"
+                    />
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button className="btn-primary flex-1" type="submit" disabled={saving || uploadingThumbnail}>
+                    {saving ? 'Saving...' : editingCourse ? 'Update' : 'Create'}
+                  </button>
+                  <button type="button" className="btn-secondary" onClick={handleCancelModal}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
