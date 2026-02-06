@@ -124,6 +124,7 @@ const InstructorQuizBuilder = () => {
     try {
       await addQuestion(currentQuizId, {
         ...questionForm,
+        position: 0,
         answers: validAnswers
       });
       setSuccess('Question added successfully!');
@@ -201,8 +202,8 @@ const InstructorQuizBuilder = () => {
           )}
         </div>
 
-        {error && <Alert type="error">{error}</Alert>}
-        {success && <Alert type="success">{success}</Alert>}
+        {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
+        {success && <Alert type="success" message={success} onClose={() => setSuccess(null)} />}
 
         {showQuizForm && (
           <div className="panel-technical p-8 mb-6">

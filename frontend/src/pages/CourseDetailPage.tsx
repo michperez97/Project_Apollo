@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCourseContent, CourseContentResponse } from '../services/content';
 import { createCheckoutSession } from '../services/payments';
@@ -11,7 +11,6 @@ import { Alert } from '../components/Alerts';
 const CourseDetailPage = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [content, setContent] = useState<CourseContentResponse | null>(null);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [loading, setLoading] = useState(true);

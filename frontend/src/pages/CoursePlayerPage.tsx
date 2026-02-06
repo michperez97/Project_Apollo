@@ -12,12 +12,6 @@ import {
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert } from '../components/Alerts';
 
-interface QuizQuestion {
-  question: string;
-  options: string[];
-  correctIndex: number;
-}
-
 const CoursePlayerPage = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const { user } = useAuth();
@@ -27,8 +21,6 @@ const CoursePlayerPage = () => {
   const [currentLesson, setCurrentLesson] = useState<CourseLesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [quizAnswers, setQuizAnswers] = useState<{ [key: number]: number }>({});
-  const [quizSubmitted, setQuizSubmitted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastUpdateRef = useRef<number>(0);
 
@@ -76,8 +68,6 @@ const CoursePlayerPage = () => {
 
   const handleLessonSelect = (lesson: CourseLesson) => {
     setCurrentLesson(lesson);
-    setQuizAnswers({});
-    setQuizSubmitted(false);
   };
 
   const handleVideoTimeUpdate = useCallback(async () => {
@@ -131,25 +121,6 @@ const CoursePlayerPage = () => {
       });
     } catch (err) {
       console.error('Failed to mark as completed:', err);
-    }
-  };
-
-  const handleQuizSubmit = async () => {
-    if (!currentLesson) return;
-    setQuizSubmitted(true);
-    try {
-      const updated = await updateLessonProgress(currentLesson.id, { status: 'completed' });
-      setProgress((prev) => {
-        const existing = prev.findIndex((p) => p.lesson_id === currentLesson.id);
-        if (existing >= 0) {
-          const copy = [...prev];
-          copy[existing] = updated;
-          return copy;
-        }
-        return [...prev, updated];
-      });
-    } catch (err) {
-      console.error('Failed to mark quiz as completed:', err);
     }
   };
 

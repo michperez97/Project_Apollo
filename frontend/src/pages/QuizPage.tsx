@@ -7,8 +7,7 @@ import {
   submitQuizAttempt,
   getQuizAttempts,
   QuizWithQuestions,
-  QuizAttempt,
-  QuizQuestion
+  QuizAttempt
 } from '../services/quizzes';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert } from '../components/Alerts';
@@ -101,7 +100,7 @@ const QuizPage = () => {
   };
 
   if (loading) return <LoadingCard />;
-  if (!quiz) return <Alert type="error">Quiz not found</Alert>;
+  if (!quiz) return <Alert type="error" message="Quiz not found" />;
 
   const allAnswered = quiz.questions.every((q) => answers[q.id] !== undefined);
   const bestAttempt = pastAttempts.filter((a) => a.score !== null).sort((a, b) => (b.score || 0) - (a.score || 0))[0];
@@ -121,7 +120,7 @@ const QuizPage = () => {
 
         {error && (
           <div className="mb-4">
-            <Alert type="error">{error}</Alert>
+            <Alert type="error" message={error} onClose={() => setError(null)} />
           </div>
         )}
 
