@@ -6,6 +6,7 @@ import { getEnrollments } from '../services/enrollments';
 import { getCourseContent, getCourseProgress, CourseContentResponse } from '../services/content';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert } from '../components/Alerts';
+import SideNav from '../components/SideNav';
 
 interface EnrolledCourse {
   enrollment: Enrollment;
@@ -16,12 +17,11 @@ interface EnrolledCourse {
 }
 
 const StudentDashboardPage = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
 
   useEffect(() => {
@@ -118,54 +118,9 @@ const StudentDashboardPage = () => {
 
   return (
     <div className="min-h-screen flex">
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-zinc-900 rounded-full border border-zinc-700 shadow-lg text-white btn-press transition-transform"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+      <SideNav activePage="my-learning" />
 
-      <aside
-        className={`sidebar-rail left-4 w-12 rounded-full py-5 gap-6 h-auto top-1/2 -translate-y-1/2 transition-transform duration-300 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-[150%]'
-        } md:translate-x-0`}
-      >
-        <div className="w-8 h-8 rounded-full bg-black border border-zinc-800 flex items-center justify-center cursor-pointer hover:border-zinc-600 transition-all duration-300 group shadow-inner btn-press shrink-0">
-          <svg className="w-4 h-4 fill-white group-hover:fill-acid transition-colors" viewBox="0 0 24 24">
-            <path d="M12 2L4 22h3.5l1.5-4h6l1.5 4H20L12 2zm0 5.5L14 15h-4l2-7.5z" />
-          </svg>
-        </div>
-
-        <nav className="flex flex-col gap-3 items-center">
-          <Link to="/dashboard" className="nav-item" title="Dashboard">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z" />
-            </svg>
-          </Link>
-          <Link to="/student/dashboard" className="nav-item active" title="My Learning">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z" />
-            </svg>
-          </Link>
-        </nav>
-
-        <div className="flex flex-col items-center gap-5 mt-auto">
-          <div className="status-dot acid" title="Online" />
-          <button
-            onClick={logout}
-            className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 hover:border-zinc-500 hover:shadow-md transition-all duration-200 btn-press shrink-0 flex items-center justify-center text-zinc-400 hover:text-white"
-            title="Sign out"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
-            </svg>
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 relative z-10 h-screen overflow-hidden md:ml-14 transition-all duration-300">
+      <main className="flex-1 relative z-10 h-screen overflow-hidden pl-16 transition-all duration-300">
         <header className="absolute top-0 left-0 w-full px-6 md:px-10 py-6 flex items-center justify-between z-20 pointer-events-none">
           <div className="floating-tile animate-fade-in-up pointer-events-auto">
             <h1 className="text-lg text-zinc-900 font-bold tracking-tight flex items-center">

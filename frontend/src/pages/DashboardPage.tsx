@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,13 +10,7 @@ import * as announcementApi from '../services/announcements';
 import * as assistantApi from '../services/assistant';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert, EmptyState } from '../components/Alerts';
-
-const defaultCourseForm = {
-  title: '',
-  description: '',
-  category: '',
-  price: 0,
-};
+import SideNav from '../components/SideNav';
 
 type ChatRole = 'user' | 'assistant';
 
@@ -36,7 +30,7 @@ const initialAssistantMessage: ChatMessage = {
 };
 
 const DashboardPage = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const stripe = useStripe();
   const elements = useElements();
   const stripeEnabled = Boolean(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -47,17 +41,13 @@ const DashboardPage = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [courseForm, setCourseForm] = useState(defaultCourseForm);
-  const [courseSaving, setCourseSaving] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
   const [enrollCourseId, setEnrollCourseId] = useState<number | ''>('');
-  const [enrollStudentId, setEnrollStudentId] = useState<number | ''>('');
   const [payingEnrollmentId, setPayingEnrollmentId] = useState<number | null>(null);
   const [paymentSession, setPaymentSession] = useState<PaymentIntentSession | null>(null);
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentBusy, setPaymentBusy] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([initialAssistantMessage]);
@@ -76,12 +66,6 @@ const DashboardPage = () => {
         return 'bg-amber-100 text-amber-800';
     }
   };
-
-  const canManageCourses = useMemo(
-    () => user?.role === 'admin' || user?.role === 'instructor',
-    [user]
-  );
-  const canEnrollOthers = useMemo(() => user?.role === 'admin' || user?.role === 'instructor', [user]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -109,29 +93,34 @@ const DashboardPage = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, chatSending]);
 
+  const isInstructorView = user?.role === 'instructor' || user?.role === 'admin';
+
   useEffect(() => {
     const load = async () => {
       if (!user) return;
       setLoading(true);
       setError(null);
       try {
-        const promises: Promise<unknown>[] = [
-          courseApi.getCourses(),
-          enrollmentApi.getEnrollments(user.role === 'student' ? user.id : undefined),
-          announcementApi.getAnnouncements()
-        ];
+        if (isInstructorView) {
+          const [instructorCourses, anns] = await Promise.all([
+            courseApi.getInstructorCourses(),
+            announcementApi.getAnnouncements()
+          ]);
+          setCourses(instructorCourses);
+          setAnnouncements(anns);
+        } else {
+          const promises: Promise<unknown>[] = [
+            courseApi.getCourses(),
+            enrollmentApi.getEnrollments(user.id),
+            announcementApi.getAnnouncements(),
+            paymentApi.getBalance(),
+            paymentApi.getTransactions()
+          ];
 
-        if (user.role === 'student') {
-          promises.push(paymentApi.getBalance());
-          promises.push(paymentApi.getTransactions());
-        }
-
-        const results = await Promise.all(promises);
-        setCourses(results[0] as Course[]);
-        setEnrollments(results[1] as Enrollment[]);
-        setAnnouncements(results[2] as Announcement[]);
-
-        if (user.role === 'student') {
+          const results = await Promise.all(promises);
+          setCourses(results[0] as Course[]);
+          setEnrollments(results[1] as Enrollment[]);
+          setAnnouncements(results[2] as Announcement[]);
           setBalance(results[3] as StudentBalance);
           setTransactions(results[4] as Transaction[]);
         }
@@ -143,41 +132,7 @@ const DashboardPage = () => {
       }
     };
     load();
-  }, [user]);
-
-  const handleCreateCourse = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!canManageCourses) return;
-    setCourseSaving(true);
-    setError(null);
-    try {
-      const payload = {
-        title: courseForm.title,
-        description: courseForm.description,
-        category: courseForm.category || 'General',
-        price: Number(courseForm.price),
-      };
-      const created = await courseApi.createCourse(payload);
-      setCourses((prev) => [created, ...prev]);
-      setCourseForm(defaultCourseForm);
-    } catch (err) {
-
-      setError('Could not create course.');
-    } finally {
-      setCourseSaving(false);
-    }
-  };
-
-  const handleDeleteCourse = async (id: number) => {
-    if (!canManageCourses) return;
-    try {
-      await courseApi.deleteCourse(id);
-      setCourses((prev) => prev.filter((c) => c.id !== id));
-    } catch (err) {
-
-      setError('Failed to delete course.');
-    }
-  };
+  }, [user, isInstructorView]);
 
   const handleEnroll = async (e: FormEvent) => {
     e.preventDefault();
@@ -189,15 +144,13 @@ const DashboardPage = () => {
         setError('Choose a course to enroll.');
         return;
       }
-      const studentId =
-        canEnrollOthers && enrollStudentId ? Number(enrollStudentId) : user?.id ?? undefined;
+      const studentId = user?.id ?? undefined;
       const enrollment = await enrollmentApi.enroll({
         course_id: courseId,
         student_id: studentId
       });
       setEnrollments((prev) => [enrollment, ...prev]);
       setEnrollCourseId('');
-      setEnrollStudentId('');
     } catch (err) {
 
       setError('Could not enroll (maybe already enrolled).');
@@ -315,85 +268,10 @@ const DashboardPage = () => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Mobile sidebar toggle */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-zinc-900 rounded-full border border-zinc-700 shadow-lg text-white btn-press transition-transform"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-
-      {/* Sidebar Rail */}
-      <aside className={`sidebar-rail left-4 w-12 rounded-full py-5 gap-6 h-auto top-1/2 -translate-y-1/2 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-[150%]'} md:translate-x-0`}>
-        {/* Brand Mark */}
-        <div className="w-8 h-8 rounded-full bg-black border border-zinc-800 flex items-center justify-center cursor-pointer hover:border-zinc-600 transition-all duration-300 group shadow-inner btn-press shrink-0">
-          <svg className="w-4 h-4 fill-white group-hover:fill-acid transition-colors" viewBox="0 0 24 24">
-            <path d="M12 2L4 22h3.5l1.5-4h6l1.5 4H20L12 2zm0 5.5L14 15h-4l2-7.5z" />
-          </svg>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex flex-col gap-3 items-center">
-          <Link to="/dashboard" className="nav-item active" title="Dashboard">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z" />
-            </svg>
-          </Link>
-
-          {user.role === 'student' && (
-            <Link to="/student/dashboard" className="nav-item" title="My Learning">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z" />
-              </svg>
-            </Link>
-          )}
-
-          {(user.role === 'admin' || user.role === 'instructor') && (
-            <Link to="/instructor/courses" className="nav-item" title="My Courses">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
-              </svg>
-            </Link>
-          )}
-
-          {user.role === 'admin' && (
-            <>
-              <Link to="/admin/moderation" className="nav-item" title="Moderation">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
-                </svg>
-              </Link>
-              <Link to="/admin/finance" className="nav-item" title="Finance">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
-                </svg>
-              </Link>
-            </>
-          )}
-        </nav>
-
-        {/* Bottom section */}
-        <div className="flex flex-col items-center gap-5 mt-auto">
-          {/* Status dot */}
-          <div className="status-dot acid" title="Online" />
-
-          {/* User avatar */}
-          <button
-            onClick={logout}
-            className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden border border-zinc-700 hover:border-zinc-500 hover:shadow-md transition-all duration-200 btn-press shrink-0 flex items-center justify-center text-zinc-400 hover:text-white"
-            title="Sign out"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
-            </svg>
-          </button>
-        </div>
-      </aside>
+      <SideNav activePage="overview" />
 
       {/* Main Content */}
-      <main className="flex-1 relative z-10 h-screen overflow-hidden md:ml-14 transition-all duration-300">
+      <main className="flex-1 relative z-10 h-screen overflow-hidden pl-16 transition-all duration-300">
         {/* Floating Header */}
         <header className="absolute top-0 left-0 w-full px-6 md:px-10 py-6 flex items-center justify-between z-20 pointer-events-none">
           {/* Left tile */}
@@ -434,8 +312,11 @@ const DashboardPage = () => {
               </svg>
             </button>
 
-            <Link to="/" className="hidden md:flex items-center h-11 bg-white border border-zinc-200 rounded-2xl px-4 shadow-md hover:shadow-lg transition-all text-sm text-zinc-600 hover:text-zinc-900">
-              Browse Courses
+            <Link
+              to={isInstructorView ? '/instructor/courses' : '/'}
+              className="hidden md:flex items-center h-11 bg-white border border-zinc-200 rounded-2xl px-4 shadow-md hover:shadow-lg transition-all text-sm text-zinc-600 hover:text-zinc-900"
+            >
+              {isInstructorView ? 'My Courses' : 'Browse Courses'}
             </Link>
           </div>
         </header>
@@ -451,362 +332,419 @@ const DashboardPage = () => {
           ) : (
             <>
               {/* Stat Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
-                {/* Courses Stat */}
-                <div className="stat-card animate-fade-in-up delay-100 group">
-                  <div className="flex justify-between items-start mb-5">
-                    <div className="p-2.5 bg-acid/10 rounded-xl text-lime-600 border border-acid/20">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
-                      </svg>
+              <div className={`grid grid-cols-1 ${isInstructorView ? 'md:grid-cols-3' : 'md:grid-cols-4'} gap-5 mb-8`}>
+                {isInstructorView ? (
+                  <>
+                    {/* My Courses Stat */}
+                    <div className="stat-card animate-fade-in-up delay-100 group">
+                      <div className="flex justify-between items-start mb-5">
+                        <div className="p-2.5 bg-acid/10 rounded-xl text-lime-600 border border-acid/20">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
+                          </svg>
+                        </div>
+                        <span className="txt-label group-hover:text-lime-600 transition-colors">My Courses</span>
+                      </div>
+                      <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">{courses.length}</h3>
+                      <p className="text-xs text-zinc-500 mt-1 font-medium">Total</p>
                     </div>
-                    <span className="txt-label group-hover:text-lime-600 transition-colors">Courses</span>
-                  </div>
-                  <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">{courses.length}</h3>
-                  <p className="text-xs text-zinc-500 mt-1 font-medium">Available</p>
-                </div>
 
-                {/* Enrollments Stat */}
-                <div className="stat-card animate-fade-in-up delay-200 group">
-                  <div className="flex justify-between items-start mb-5">
-                    <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-600 border border-blue-500/20">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z" />
-                      </svg>
+                    {/* Published Stat */}
+                    <div className="stat-card animate-fade-in-up delay-200 group">
+                      <div className="flex justify-between items-start mb-5">
+                        <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600 border border-emerald-500/20">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                          </svg>
+                        </div>
+                        <span className="txt-label">Published</span>
+                      </div>
+                      <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">
+                        {courses.filter(c => c.status === 'approved').length}
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-1 font-medium">Approved</p>
                     </div>
-                    <span className="txt-label">Enrollments</span>
-                  </div>
-                  <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">{enrollments.length}</h3>
-                  <p className="text-xs text-zinc-500 mt-1 font-medium">{paidEnrollments} paid, {pendingEnrollments} pending</p>
-                </div>
 
-                {/* Balance Stat (Students only) */}
-                {user.role === 'student' && balance && (
-                  <div className="stat-card animate-fade-in-up delay-300 group">
-                    <div className="flex justify-between items-start mb-5">
-                      <div className={`p-2.5 rounded-xl border ${balance.balance > 0 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}>
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" />
+                    {/* Pending Review Stat */}
+                    <div className="stat-card animate-fade-in-up delay-300 group">
+                      <div className="flex justify-between items-start mb-5">
+                        <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-600 border border-amber-500/20">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" />
+                          </svg>
+                        </div>
+                        <span className="txt-label">Pending Review</span>
+                      </div>
+                      <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">
+                        {courses.filter(c => c.status === 'pending').length}
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-1 font-medium">Awaiting approval</p>
+                    </div>
+
+                  </>
+                ) : (
+                  <>
+                    {/* Courses Stat */}
+                    <div className="stat-card animate-fade-in-up delay-100 group">
+                      <div className="flex justify-between items-start mb-5">
+                        <div className="p-2.5 bg-acid/10 rounded-xl text-lime-600 border border-acid/20">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
+                          </svg>
+                        </div>
+                        <span className="txt-label group-hover:text-lime-600 transition-colors">Courses</span>
+                      </div>
+                      <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">{courses.length}</h3>
+                      <p className="text-xs text-zinc-500 mt-1 font-medium">Available</p>
+                    </div>
+
+                    {/* Enrollments Stat */}
+                    <div className="stat-card animate-fade-in-up delay-200 group">
+                      <div className="flex justify-between items-start mb-5">
+                        <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-600 border border-blue-500/20">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z" />
+                          </svg>
+                        </div>
+                        <span className="txt-label">Enrollments</span>
+                      </div>
+                      <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">{enrollments.length}</h3>
+                      <p className="text-xs text-zinc-500 mt-1 font-medium">{paidEnrollments} paid, {pendingEnrollments} pending</p>
+                    </div>
+
+                    {/* Balance Stat */}
+                    {balance && (
+                      <div className="stat-card animate-fade-in-up delay-300 group">
+                        <div className="flex justify-between items-start mb-5">
+                          <div className={`p-2.5 rounded-xl border ${balance.balance > 0 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}>
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" />
+                            </svg>
+                          </div>
+                          <span className="txt-label">Balance</span>
+                        </div>
+                        <h3 className={`text-3xl font-bold mb-1 font-mono tracking-tight ${balance.balance > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                          ${balance.balance.toFixed(0)}
+                        </h3>
+                        <p className="text-xs text-zinc-500 mt-1 font-medium">{balance.balance > 0 ? 'Due' : 'Paid in full'}</p>
+                      </div>
+                    )}
+
+                    {/* Quick Action Card */}
+                    <Link
+                      to="/student/dashboard"
+                      className="stat-card animate-fade-in-up delay-400 bg-gradient-to-br from-acid/20 to-transparent border-acid/30 flex flex-col justify-center items-center text-center group cursor-pointer hover:bg-acid/10 transition-colors"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-acid text-zinc-900 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-glow-acid">
+                        <svg className="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
                         </svg>
                       </div>
-                      <span className="txt-label">Balance</span>
-                    </div>
-                    <h3 className={`text-3xl font-bold mb-1 font-mono tracking-tight ${balance.balance > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                      ${balance.balance.toFixed(0)}
-                    </h3>
-                    <p className="text-xs text-zinc-500 mt-1 font-medium">{balance.balance > 0 ? 'Due' : 'Paid in full'}</p>
-                  </div>
-                )}
-
-                {/* Quick Action Card */}
-                {user.role === 'student' && (
-                  <Link
-                    to="/student/dashboard"
-                    className="stat-card animate-fade-in-up delay-400 bg-gradient-to-br from-acid/20 to-transparent border-acid/30 flex flex-col justify-center items-center text-center group cursor-pointer hover:bg-acid/10 transition-colors"
-                  >
-                    <div className="w-14 h-14 rounded-full bg-acid text-zinc-900 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-glow-acid">
-                      <svg className="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    </div>
-                    <h3 className="text-zinc-900 font-bold">Continue Learning</h3>
-                    <p className="text-xs text-zinc-500 mt-1 font-mono font-medium">View My Courses</p>
-                  </Link>
-                )}
-
-                {(user.role === 'admin' || user.role === 'instructor') && (
-                  <Link
-                    to="/instructor/courses"
-                    className="stat-card animate-fade-in-up delay-400 bg-gradient-to-br from-acid/20 to-transparent border-acid/30 flex flex-col justify-center items-center text-center group cursor-pointer hover:bg-acid/10 transition-colors"
-                  >
-                    <div className="w-14 h-14 rounded-full bg-acid text-zinc-900 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-glow-acid">
-                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-                      </svg>
-                    </div>
-                    <h3 className="text-zinc-900 font-bold">Manage Courses</h3>
-                    <p className="text-xs text-zinc-500 mt-1 font-mono font-medium">Create & Edit</p>
-                  </Link>
+                      <h3 className="text-zinc-900 font-bold">Continue Learning</h3>
+                      <p className="text-xs text-zinc-500 mt-1 font-mono font-medium">View My Courses</p>
+                    </Link>
+                  </>
                 )}
               </div>
 
               {/* Content Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Main Column - Courses */}
-                <div className="lg:col-span-2 space-y-6 animate-fade-in-up delay-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-zinc-900 font-bold flex items-center gap-3 text-lg">
-                      <svg className="w-5 h-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
-                      </svg>
-                      Available Courses
-                    </h2>
-                    <span className="txt-label">{courses.length} Total</span>
-                  </div>
+                {isInstructorView ? (
+                  <>
+                    {/* Instructor Main Column - Recent Courses */}
+                    <div className="lg:col-span-2 space-y-6 animate-fade-in-up delay-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-zinc-900 font-bold flex items-center gap-3 text-lg">
+                          <svg className="w-5 h-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
+                          </svg>
+                          Recent Courses
+                        </h2>
+                        <span className="txt-label">{courses.length} Total</span>
+                      </div>
 
-                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                    {courses.map((course) => (
-                      <div key={course.id} className="glass-card p-0 rounded-2xl flex flex-col sm:flex-row overflow-hidden group border border-zinc-200 hover:border-acid/50 shadow-sm hover:shadow-md">
-                        <div className="w-full sm:w-40 h-24 sm:h-auto bg-zinc-100 relative overflow-hidden flex items-center justify-center">
-                          <span className="txt-label">{course.category}</span>
+                      <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                        {courses.slice(0, 5).map((course) => {
+                          const statusColors: Record<string, string> = {
+                            approved: 'bg-emerald-100 text-emerald-800',
+                            pending: 'bg-amber-100 text-amber-800',
+                            rejected: 'bg-red-100 text-red-800',
+                            draft: 'bg-zinc-100 text-zinc-600',
+                          };
+                          const statusClass = statusColors[course.status ?? 'draft'] ?? statusColors.draft;
+
+                          return (
+                            <Link
+                              key={course.id}
+                              to={`/instructor/courses/${course.id}/builder`}
+                              className="glass-card p-0 rounded-2xl flex flex-col sm:flex-row overflow-hidden group border border-zinc-200 hover:border-acid/50 shadow-sm hover:shadow-md cursor-pointer"
+                            >
+                              <div className="w-full sm:w-40 h-24 sm:h-auto bg-zinc-100 relative overflow-hidden flex items-center justify-center">
+                                <span className="txt-label">{course.category ?? 'General'}</span>
+                              </div>
+                              <div className="p-4 flex-1 flex flex-col justify-between bg-white/50">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h3 className="text-base text-zinc-900 font-bold group-hover:text-lime-600 transition-colors tracking-tight">
+                                      {course.title}
+                                    </h3>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
+                                      {course.status ?? 'draft'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-3 mt-2">
+                                    <span className="text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 font-medium">
+                                      {course.category ?? 'General'}
+                                    </span>
+                                    <span className="text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 font-medium">
+                                      ${course.price ?? 0}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 mt-3">
+                                  <span className="text-xs font-semibold text-zinc-700 group-hover:text-lime-600 transition-colors">
+                                    Open in Builder →
+                                  </span>
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                        {!courses.length && (
+                          <EmptyState
+                            icon="books"
+                            title="No courses yet"
+                            description="Create your first course to get started"
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Instructor Right Column - Announcements only */}
+                    <div className="space-y-6 animate-fade-in-up delay-300">
+                      {announcements.length > 0 && (
+                        <div className="glass-card p-6 rounded-2xl">
+                          <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest mb-4">
+                            Announcements
+                          </h3>
+                          <div className="space-y-3 max-h-[200px] overflow-y-auto">
+                            {announcements.slice(0, 3).map((ann) => (
+                              <div key={ann.id} className="border-l-2 border-acid pl-3">
+                                <p className="text-sm font-semibold text-zinc-900">{ann.title}</p>
+                                <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{ann.message}</p>
+                                <p className="txt-label mt-1">{new Date(ann.created_at).toLocaleDateString()}</p>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="p-4 flex-1 flex flex-col justify-between bg-white/50">
-                          <div>
-                            <h3 className="text-base text-zinc-900 font-bold group-hover:text-lime-600 transition-colors tracking-tight">
-                              {course.title}
-                            </h3>
-                            <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{course.description}</p>
-                            <div className="flex items-center gap-3 mt-2">
-                              <span className="text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 font-medium">
-                                ${course.price ?? 0}
-                              </span>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Student Main Column - Available Courses */}
+                    <div className="lg:col-span-2 space-y-6 animate-fade-in-up delay-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-zinc-900 font-bold flex items-center gap-3 text-lg">
+                          <svg className="w-5 h-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
+                          </svg>
+                          Available Courses
+                        </h2>
+                        <span className="txt-label">{courses.length} Total</span>
+                      </div>
+
+                      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                        {courses.map((course) => (
+                          <div key={course.id} className="glass-card p-0 rounded-2xl flex flex-col sm:flex-row overflow-hidden group border border-zinc-200 hover:border-acid/50 shadow-sm hover:shadow-md">
+                            <div className="w-full sm:w-40 h-24 sm:h-auto bg-zinc-100 relative overflow-hidden flex items-center justify-center">
+                              <span className="txt-label">{course.category}</span>
+                            </div>
+                            <div className="p-4 flex-1 flex flex-col justify-between bg-white/50">
+                              <div>
+                                <h3 className="text-base text-zinc-900 font-bold group-hover:text-lime-600 transition-colors tracking-tight">
+                                  {course.title}
+                                </h3>
+                                <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{course.description}</p>
+                                <div className="flex items-center gap-3 mt-2">
+                                  <span className="text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 font-medium">
+                                    ${course.price ?? 0}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 mt-3">
+                                <Link to={`/course/${course.id}`} className="text-xs font-semibold text-zinc-700 hover:text-lime-600 transition-colors">
+                                  View Details
+                                </Link>
+                              </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 mt-3">
-                            <Link to={`/course/${course.id}`} className="text-xs font-semibold text-zinc-700 hover:text-lime-600 transition-colors">
-                              View Details
-                            </Link>
-                            {canManageCourses && (
-                              <button
-                                className="text-xs text-red-600 hover:text-red-700 ml-auto"
-                                onClick={() => handleDeleteCourse(course.id)}
-                              >
-                                Delete
-                              </button>
-                            )}
-                          </div>
-                        </div>
+                        ))}
+                        {!courses.length && (
+                          <EmptyState
+                            icon="books"
+                            title="No courses yet"
+                            description="No courses available"
+                          />
+                        )}
                       </div>
-                    ))}
-                    {!courses.length && (
-                      <EmptyState
-                        icon="books"
-                        title="No courses yet"
-                        description={canManageCourses ? "Create your first course to get started" : "No courses available"}
-                      />
-                    )}
-                  </div>
-
-                  {/* Create Course Form */}
-                  {canManageCourses && (
-                    <div className="glass-card p-6 rounded-2xl mt-6">
-                      <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-acid rounded-full" />
-                        Create Course
-                      </h3>
-                      <form className="grid sm:grid-cols-2 gap-4" onSubmit={handleCreateCourse}>
-                        <div>
-                          <label className="txt-label mb-1 block">Title</label>
-                          <input
-                            className="input"
-                            value={courseForm.title}
-                            onChange={(e) => setCourseForm((p) => ({ ...p, title: e.target.value }))}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="txt-label mb-1 block">Category</label>
-                          <input
-                            className="input"
-                            value={courseForm.category}
-                            onChange={(e) => setCourseForm((p) => ({ ...p, category: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="txt-label mb-1 block">Price</label>
-                          <input
-                            className="input"
-                            type="number"
-                            min={0}
-                            value={courseForm.price}
-                            onChange={(e) => setCourseForm((p) => ({ ...p, price: Number(e.target.value) }))}
-                            required
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="txt-label mb-1 block">Description</label>
-                          <textarea
-                            className="input min-h-[80px]"
-                            value={courseForm.description}
-                            onChange={(e) => setCourseForm((p) => ({ ...p, description: e.target.value }))}
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <button className="btn-primary w-full sm:w-auto" type="submit" disabled={courseSaving}>
-                            {courseSaving ? 'Creating...' : 'Create Course'}
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  )}
-                </div>
-
-                {/* Right Column - Enrollments & Activity */}
-                <div className="space-y-6 animate-fade-in-up delay-300">
-                  {/* Enrollments */}
-                  <div className="glass-card p-6 rounded-2xl">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-acid rounded-full animate-pulse" />
-                        Enrollments
-                      </h3>
                     </div>
 
-                    {user.role === 'student' && balance && (
-                      <div className="mb-4 p-3 bg-zinc-50 border border-zinc-200 rounded-xl">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <p className="txt-label">Total Tuition</p>
-                            <p className="font-semibold text-zinc-900 font-mono">${balance.total_tuition.toFixed(0)}</p>
-                          </div>
-                          <div>
-                            <p className="txt-label">Total Paid</p>
-                            <p className="font-semibold text-emerald-600 font-mono">${balance.total_paid.toFixed(0)}</p>
-                          </div>
+                    {/* Student Right Column - Enrollments & Activity */}
+                    <div className="space-y-6 animate-fade-in-up delay-300">
+                      {/* Enrollments */}
+                      <div className="glass-card p-6 rounded-2xl">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-acid rounded-full animate-pulse" />
+                            Enrollments
+                          </h3>
                         </div>
-                      </div>
-                    )}
 
-                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-                      {enrollments.map((enrollment) => (
-                        <div key={enrollment.id} className="border border-zinc-200 rounded-xl p-3 hover:border-zinc-300 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <p className="font-semibold text-zinc-900 text-sm">Course #{enrollment.course_id}</p>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${paymentStatusClass(enrollment.payment_status)}`}>
-                              {enrollment.payment_status}
-                            </span>
+                        {balance && (
+                          <div className="mb-4 p-3 bg-zinc-50 border border-zinc-200 rounded-xl">
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <p className="txt-label">Total Tuition</p>
+                                <p className="font-semibold text-zinc-900 font-mono">${balance.total_tuition.toFixed(0)}</p>
+                              </div>
+                              <div>
+                                <p className="txt-label">Total Paid</p>
+                                <p className="font-semibold text-emerald-600 font-mono">${balance.total_paid.toFixed(0)}</p>
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-xs text-zinc-500 mt-1 font-mono">
-                            ${enrollment.tuition_amount} tuition
-                          </p>
+                        )}
 
-                          {user.role === 'student' && enrollment.payment_status !== 'paid' && (
-                            <div className="mt-3">
-                              {stripeEnabled ? (
-                                <button
-                                  className="btn-accent text-xs py-1.5 w-full"
-                                  onClick={() => beginPayment(enrollment.id)}
-                                  disabled={paymentBusy && payingEnrollmentId === enrollment.id}
-                                >
-                                  {paymentBusy && payingEnrollmentId === enrollment.id ? 'Starting...' : 'Pay Tuition'}
-                                </button>
-                              ) : (
-                                <p className="text-xs text-zinc-400">Payments disabled</p>
-                              )}
+                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                          {enrollments.map((enrollment) => (
+                            <div key={enrollment.id} className="border border-zinc-200 rounded-xl p-3 hover:border-zinc-300 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <p className="font-semibold text-zinc-900 text-sm">Course #{enrollment.course_id}</p>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${paymentStatusClass(enrollment.payment_status)}`}>
+                                  {enrollment.payment_status}
+                                </span>
+                              </div>
+                              <p className="text-xs text-zinc-500 mt-1 font-mono">
+                                ${enrollment.tuition_amount} tuition
+                              </p>
 
-                              {stripeEnabled && payingEnrollmentId === enrollment.id && paymentSession && (
-                                <div className="mt-3 border border-zinc-200 rounded-xl p-3 space-y-2 bg-white">
-                                  <p className="text-sm font-medium text-zinc-900">
-                                    Pay ${(paymentSession.amountCents / 100).toFixed(2)}
-                                  </p>
-                                  <div className="rounded border border-zinc-200 p-2 bg-white">
-                                    <CardElement />
-                                  </div>
-                                  <button
-                                    className="btn-primary w-full text-sm"
-                                    onClick={handleConfirmPayment}
-                                    disabled={paymentBusy}
-                                  >
-                                    {paymentBusy ? 'Processing...' : 'Confirm'}
-                                  </button>
+                              {enrollment.payment_status !== 'paid' && (
+                                <div className="mt-3">
+                                  {stripeEnabled ? (
+                                    <button
+                                      className="btn-accent text-xs py-1.5 w-full"
+                                      onClick={() => beginPayment(enrollment.id)}
+                                      disabled={paymentBusy && payingEnrollmentId === enrollment.id}
+                                    >
+                                      {paymentBusy && payingEnrollmentId === enrollment.id ? 'Starting...' : 'Pay Tuition'}
+                                    </button>
+                                  ) : (
+                                    <p className="text-xs text-zinc-400">Payments disabled</p>
+                                  )}
+
+                                  {stripeEnabled && payingEnrollmentId === enrollment.id && paymentSession && (
+                                    <div className="mt-3 border border-zinc-200 rounded-xl p-3 space-y-2 bg-white">
+                                      <p className="text-sm font-medium text-zinc-900">
+                                        Pay ${(paymentSession.amountCents / 100).toFixed(2)}
+                                      </p>
+                                      <div className="rounded border border-zinc-200 p-2 bg-white">
+                                        <CardElement />
+                                      </div>
+                                      <button
+                                        className="btn-primary w-full text-sm"
+                                        onClick={handleConfirmPayment}
+                                        disabled={paymentBusy}
+                                      >
+                                        {paymentBusy ? 'Processing...' : 'Confirm'}
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
+                          ))}
+                          {!enrollments.length && (
+                            <EmptyState
+                              icon="graduation"
+                              title="No enrollments"
+                              description="Enroll in a course to get started"
+                            />
                           )}
                         </div>
-                      ))}
-                      {!enrollments.length && (
-                        <EmptyState
-                          icon="graduation"
-                          title="No enrollments"
-                          description="Enroll in a course to get started"
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Enroll Form */}
-                  <div className="glass-card p-6 rounded-2xl">
-                    <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest mb-4">
-                      Enroll in Course
-                    </h3>
-                    <form className="space-y-3" onSubmit={handleEnroll}>
-                      <div>
-                        <label className="txt-label mb-1 block">Select Course</label>
-                        <select
-                          className="input"
-                          value={enrollCourseId}
-                          onChange={(e) => setEnrollCourseId(Number(e.target.value))}
-                          required
-                        >
-                          <option value="">Choose...</option>
-                          {courses.map((course) => (
-                            <option key={course.id} value={course.id}>
-                              {course.title}
-                            </option>
-                          ))}
-                        </select>
                       </div>
 
-                      {canEnrollOthers && (
-                        <div>
-                          <label className="txt-label mb-1 block">Student ID (optional)</label>
-                          <input
-                            className="input"
-                            type="number"
-                            value={enrollStudentId}
-                            onChange={(e) => setEnrollStudentId(Number(e.target.value))}
-                            placeholder="Leave empty for self"
-                          />
+                      {/* Enroll Form */}
+                      <div className="glass-card p-6 rounded-2xl">
+                        <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest mb-4">
+                          Enroll in Course
+                        </h3>
+                        <form className="space-y-3" onSubmit={handleEnroll}>
+                          <div>
+                            <label className="txt-label mb-1 block">Select Course</label>
+                            <select
+                              className="input"
+                              value={enrollCourseId}
+                              onChange={(e) => setEnrollCourseId(Number(e.target.value))}
+                              required
+                            >
+                              <option value="">Choose...</option>
+                              {courses.map((course) => (
+                                <option key={course.id} value={course.id}>
+                                  {course.title}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <button className="btn-primary w-full" type="submit" disabled={enrolling}>
+                            {enrolling ? 'Enrolling...' : 'Enroll'}
+                          </button>
+                        </form>
+                      </div>
+
+                      {/* Announcements */}
+                      {announcements.length > 0 && (
+                        <div className="glass-card p-6 rounded-2xl">
+                          <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest mb-4">
+                            Announcements
+                          </h3>
+                          <div className="space-y-3 max-h-[200px] overflow-y-auto">
+                            {announcements.slice(0, 3).map((ann) => (
+                              <div key={ann.id} className="border-l-2 border-acid pl-3">
+                                <p className="text-sm font-semibold text-zinc-900">{ann.title}</p>
+                                <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{ann.message}</p>
+                                <p className="txt-label mt-1">{new Date(ann.created_at).toLocaleDateString()}</p>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
 
-                      <button className="btn-primary w-full" type="submit" disabled={enrolling}>
-                        {enrolling ? 'Enrolling...' : 'Enroll'}
-                      </button>
-                    </form>
-                  </div>
-
-                  {/* Announcements */}
-                  {announcements.length > 0 && (
-                    <div className="glass-card p-6 rounded-2xl">
-                      <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest mb-4">
-                        Announcements
-                      </h3>
-                      <div className="space-y-3 max-h-[200px] overflow-y-auto">
-                        {announcements.slice(0, 3).map((ann) => (
-                          <div key={ann.id} className="border-l-2 border-acid pl-3">
-                            <p className="text-sm font-semibold text-zinc-900">{ann.title}</p>
-                            <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{ann.message}</p>
-                            <p className="txt-label mt-1">{new Date(ann.created_at).toLocaleDateString()}</p>
+                      {/* Transactions */}
+                      {transactions.length > 0 && (
+                        <div className="glass-card p-6 rounded-2xl">
+                          <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest mb-4">
+                            Recent Transactions
+                          </h3>
+                          <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                            {transactions.slice(0, 5).map((txn) => (
+                              <div key={txn.id} className="flex items-center justify-between p-2 hover:bg-zinc-50 rounded-lg transition-colors">
+                                <div>
+                                  <p className="text-sm font-medium text-zinc-900 capitalize">{txn.type}</p>
+                                  <p className="txt-label">{new Date(txn.created_at).toLocaleDateString()}</p>
+                                </div>
+                                <p className={`font-semibold font-mono ${txn.type === 'payment' ? 'text-emerald-600' : 'text-blue-600'}`}>
+                                  {txn.type === 'refund' ? '+' : '-'}${txn.amount.toFixed(0)}
+                                </p>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-
-                  {/* Transactions */}
-                  {user.role === 'student' && transactions.length > 0 && (
-                    <div className="glass-card p-6 rounded-2xl">
-                      <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest mb-4">
-                        Recent Transactions
-                      </h3>
-                      <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                        {transactions.slice(0, 5).map((txn) => (
-                          <div key={txn.id} className="flex items-center justify-between p-2 hover:bg-zinc-50 rounded-lg transition-colors">
-                            <div>
-                              <p className="text-sm font-medium text-zinc-900 capitalize">{txn.type}</p>
-                              <p className="txt-label">{new Date(txn.created_at).toLocaleDateString()}</p>
-                            </div>
-                            <p className={`font-semibold font-mono ${txn.type === 'payment' ? 'text-emerald-600' : 'text-blue-600'}`}>
-                              {txn.type === 'refund' ? '+' : '-'}${txn.amount.toFixed(0)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
 
               {/* Footer */}
