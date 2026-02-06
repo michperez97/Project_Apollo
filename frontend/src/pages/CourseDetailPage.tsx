@@ -196,11 +196,6 @@ const CourseDetailPage = () => {
                     {section.lessons.map((lesson) => (
                       <li key={lesson.id} className="px-4 py-3 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <span className="text-zinc-400">
-                            {lesson.lesson_type === 'video' && '▶'}
-                            {lesson.lesson_type === 'text' && '📄'}
-                            {lesson.lesson_type === 'quiz' && '❓'}
-                          </span>
                           <span className="text-zinc-700">{lesson.title}</span>
                           {lesson.is_preview && (
                             <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-acid/30 text-zinc-700">

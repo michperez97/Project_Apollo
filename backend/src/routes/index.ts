@@ -13,6 +13,8 @@ import moderationRoutes from './moderationRoutes';
 import courseContentRoutes from './courseContentRoutes';
 import progressRoutes from './progressRoutes';
 import assistantRoutes from './assistantRoutes';
+import quizRoutes from './quizRoutes';
+import certificateRoutes from './certificateRoutes';
 
 const router = Router();
 
@@ -30,5 +32,7 @@ router.use('/instructor', instructorRoutes);
 router.use('/admin', moderationRoutes);
 router.use('/lessons', progressRoutes);
 router.use('/assistant', assistantRoutes);
+router.use('/quizzes', quizRoutes);
+router.use('/certificates', certificateRoutes);
 
 export default router;
