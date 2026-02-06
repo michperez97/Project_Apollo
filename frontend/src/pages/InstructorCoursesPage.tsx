@@ -56,7 +56,7 @@ const InstructorCoursesPage = () => {
         const data = await courseApi.getInstructorCourses();
         setCourses(data);
       } catch (err) {
-        console.error(err);
+
         setError('Failed to load courses.');
       } finally {
         setLoading(false);
@@ -76,7 +76,7 @@ const InstructorCoursesPage = () => {
       setCourseForm((prev) => ({ ...prev, thumbnail_url: url }));
       setSuccess('Thumbnail uploaded successfully');
     } catch (err) {
-      console.error(err);
+
       setError('Failed to upload thumbnail.');
     } finally {
       setUploadingThumbnail(false);
@@ -131,7 +131,7 @@ const InstructorCoursesPage = () => {
       }
       setCourseForm(defaultCourseForm);
     } catch (err) {
-      console.error(err);
+
       setError(editingCourse ? 'Failed to update course.' : 'Failed to create course.');
     } finally {
       setSaving(false);
@@ -164,7 +164,7 @@ const InstructorCoursesPage = () => {
       setCourses((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
       setSuccess('Course submitted for review');
     } catch (err) {
-      console.error(err);
+
       setError('Failed to submit course for review.');
     } finally {
       setSubmitting(null);

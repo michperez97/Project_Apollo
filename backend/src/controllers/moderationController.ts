@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { getCourseById, listPendingCourses, updateCourseStatus } from '../models/courseModel';
 import { createCourseReview } from '../models/courseReviewModel';
 import { AuthenticatedRequest } from '../types/auth';
+import { notifyCourseStatus } from '../services/notificationService';
 
 export const listPendingCoursesHandler = async (
   req: AuthenticatedRequest,
@@ -50,6 +51,9 @@ export const approveCourseHandler = async (
     });
 
     const updated = await updateCourseStatus(courseId, 'approved', new Date());
+    if (updated) {
+      await notifyCourseStatus({ course: updated, status: 'approved', feedback });
+    }
     return res.json({ course: updated });
   } catch (error) {
     return next(error);
@@ -93,6 +97,9 @@ export const rejectCourseHandler = async (
     });
 
     const updated = await updateCourseStatus(courseId, 'rejected', null);
+    if (updated) {
+      await notifyCourseStatus({ course: updated, status: 'rejected', feedback: feedback.trim() });
+    }
     return res.json({ course: updated });
   } catch (error) {
     return next(error);

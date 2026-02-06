@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Course } from '../types';
 import * as courseApi from '../services/courses';
 import { LoadingCard } from '../components/LoadingStates';
-import { Alert, EmptyState } from '../components/Alerts';
+import { Alert } from '../components/Alerts';
 
 const AdminModerationQueue = () => {
   const { user, logout } = useAuth();
@@ -31,7 +31,7 @@ const AdminModerationQueue = () => {
         const data = await courseApi.getPendingCourses();
         setCourses(data);
       } catch (err) {
-        console.error(err);
+
         setError('Failed to load pending courses.');
       } finally {
         setLoading(false);
@@ -49,7 +49,7 @@ const AdminModerationQueue = () => {
       setCourses((prev) => prev.filter((c) => c.id !== courseId));
       setSuccess('Course approved successfully');
     } catch (err) {
-      console.error(err);
+
       setError('Failed to approve course.');
     } finally {
       setProcessing(null);
@@ -77,7 +77,7 @@ const AdminModerationQueue = () => {
       setShowRejectForm(null);
       setSuccess('Course rejected');
     } catch (err) {
-      console.error(err);
+
       setError('Failed to reject course.');
     } finally {
       setProcessing(null);

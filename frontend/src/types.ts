@@ -17,7 +17,7 @@ export interface AuthResponse {
 
 export interface Course {
   id: number;
-  title?: string;
+  title: string;
   description?: string | null;
   category?: string | null;
   price?: number | null;
@@ -27,13 +27,6 @@ export interface Course {
   published_at?: string | null;
   created_at?: string;
   updated_at?: string;
-  code?: string;
-  name?: string;
-  credit_hours?: number;
-  price_per_credit?: number;
-  teacher_id?: number | null;
-  semester?: string;
-  year?: number;
 }
 
 export interface Enrollment {

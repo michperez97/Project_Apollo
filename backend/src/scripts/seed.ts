@@ -11,8 +11,7 @@ type UserRow = {
 
 type CourseRow = {
   id: number;
-  credit_hours: number;
-  price_per_credit: string | number;
+  price: number;
 };
 
 const SEED_PASSWORD = process.env.SEED_PASSWORD ?? 'Password123!';
@@ -45,35 +44,18 @@ const upsertUser = async (role: UserRole, email: string, passwordHash: string): 
 };
 
 const upsertCourse = async (instructorId: number): Promise<CourseRow> => {
+  const title = 'Data Structures & Algorithms';
+
+  // Delete existing course by title, then re-insert
+  await pool.query('DELETE FROM courses WHERE title = $1', [title]);
+
   const result = await pool.query<CourseRow>(
-    `INSERT INTO courses (code, name, description, credit_hours, price_per_credit, teacher_id, semester, year, title, category, price, status, instructor_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-     ON CONFLICT (code)
-     DO UPDATE SET
-       name = EXCLUDED.name,
-       description = EXCLUDED.description,
-       credit_hours = EXCLUDED.credit_hours,
-       price_per_credit = EXCLUDED.price_per_credit,
-       teacher_id = EXCLUDED.teacher_id,
-       semester = EXCLUDED.semester,
-       year = EXCLUDED.year,
-       title = EXCLUDED.title,
-       category = EXCLUDED.category,
-       price = EXCLUDED.price,
-       status = EXCLUDED.status,
-       instructor_id = EXCLUDED.instructor_id,
-       updated_at = CURRENT_TIMESTAMP
-     RETURNING id, credit_hours, price_per_credit`,
+    `INSERT INTO courses (title, description, category, price, status, instructor_id)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, price`,
     [
-      'DATA-STRUCT-101',
-      'Data Structures & Algorithms',
+      title,
       'Core data structures (arrays, linked lists, stacks, queues, trees, graphs) and algorithm analysis (Big-O, sorting, searching).',
-      3,
-      120,
-      instructorId,
-      'On Demand',
-      new Date().getFullYear(),
-      'Data Structures & Algorithms',
       'Computer Science',
       149,
       'approved',
@@ -194,7 +176,7 @@ const main = async () => {
   const student = await upsertUser('student', STUDENT_EMAIL, passwordHash);
 
   const course = await upsertCourse(instructor.id);
-  const tuitionAmount = Number(course.credit_hours) * Number(course.price_per_credit);
+  const tuitionAmount = Number(course.price);
   await upsertEnrollment(student.id, course.id, tuitionAmount);
 
   const moduleId = await getOrCreateModule(course.id, 'Getting Started', 1);

@@ -93,7 +93,7 @@ const CoursePage = () => {
           setSubmissions(Object.fromEntries(subsEntries));
         }
       } catch (err) {
-        console.error(err);
+
         setError('Could not load course.');
       } finally {
         setLoading(false);
@@ -107,7 +107,7 @@ const CoursePage = () => {
       const data = await moduleApi.getModules(id);
       setModules(data);
     } catch (err) {
-      console.error(err);
+
       setError('Failed to refresh modules.');
     }
   };
@@ -126,7 +126,7 @@ const CoursePage = () => {
         setSubmissions(Object.fromEntries(subsEntries));
       }
     } catch (err) {
-      console.error(err);
+
       setError('Failed to refresh assignments.');
     }
   };
@@ -140,7 +140,7 @@ const CoursePage = () => {
       setModuleTitle('');
       await refreshModules();
     } catch (err) {
-      console.error(err);
+
       setError('Could not create module.');
     } finally {
       setSavingModule(false);
@@ -152,7 +152,7 @@ const CoursePage = () => {
       await moduleApi.deleteModule(moduleId);
       await refreshModules();
     } catch (err) {
-      console.error(err);
+
       setError('Could not delete module.');
     }
   };
@@ -172,7 +172,7 @@ const CoursePage = () => {
       setItemDrafts((prev) => ({ ...prev, [moduleId]: defaultItemDraft }));
       await refreshModules();
     } catch (err) {
-      console.error(err);
+
       setError('Could not add item.');
     } finally {
       setSavingItem((prev) => ({ ...prev, [moduleId]: false }));
@@ -184,7 +184,7 @@ const CoursePage = () => {
       await moduleApi.deleteModuleItem(itemId);
       await refreshModules();
     } catch (err) {
-      console.error(err);
+
       setError('Could not delete item.');
     }
   };
@@ -204,7 +204,7 @@ const CoursePage = () => {
       setAssignmentForm({ title: '', description: '', due_at: '', points: 100, module_id: '' });
       await refreshAssignments();
     } catch (err) {
-      console.error(err);
+
       setError('Could not create assignment.');
     } finally {
       setSavingAssignment(false);
@@ -216,7 +216,7 @@ const CoursePage = () => {
       await assignmentApi.deleteAssignment(assignmentId);
       await refreshAssignments();
     } catch (err) {
-      console.error(err);
+
       setError('Could not delete assignment.');
     }
   };
@@ -234,7 +234,7 @@ const CoursePage = () => {
       setAnnouncements((prev) => [announcement, ...prev]);
       setAnnouncementForm({ title: '', message: '' });
     } catch (err) {
-      console.error(err);
+
       setError('Could not create announcement.');
     } finally {
       setSavingAnnouncement(false);
@@ -246,7 +246,7 @@ const CoursePage = () => {
       await announcementApi.deleteAnnouncement(announcementId);
       setAnnouncements((prev) => prev.filter((a) => a.id !== announcementId));
     } catch (err) {
-      console.error(err);
+
       setError('Could not delete announcement.');
     }
   };
@@ -270,7 +270,7 @@ const CoursePage = () => {
         [assignmentId]: { content_url: '', content_text: '' }
       }));
     } catch (err) {
-      console.error(err);
+
       setError('Could not submit assignment.');
     } finally {
       setSubmissionSaving((prev) => ({ ...prev, [assignmentId]: false }));
@@ -284,7 +284,7 @@ const CoursePage = () => {
       const url = await uploadFile(file, 'module_items');
       setDraft(moduleId, { content_url: url, type: 'file' });
     } catch (err) {
-      console.error(err);
+
       setError('File upload failed.');
     } finally {
       setUploadingModuleFile((prev) => ({ ...prev, [moduleId]: false }));
@@ -301,7 +301,7 @@ const CoursePage = () => {
         [assignmentId]: { ...(prev[assignmentId] ?? { content_url: '', content_text: '' }), content_url: url }
       }));
     } catch (err) {
-      console.error(err);
+
       setError('File upload failed.');
     } finally {
       setUploadingSubmissionFile((prev) => ({ ...prev, [assignmentId]: false }));
@@ -325,7 +325,7 @@ const CoursePage = () => {
         return next;
       });
     } catch (err) {
-      console.error(err);
+
       setError('Could not save grade.');
     }
   };
@@ -341,7 +341,7 @@ const CoursePage = () => {
       link.click();
       link.parentNode?.removeChild(link);
     } catch (err) {
-      console.error(err);
+
       setError('Could not download gradebook.');
     }
   };
@@ -381,10 +381,10 @@ const CoursePage = () => {
             / Course
           </p>
           <h1 className="text-xl sm:text-2xl font-semibold break-words">
-            {course.code} — {course.name}
+            {course.title}
           </h1>
           <p className="text-xs sm:text-sm text-gray-600">
-            {course.semester} {course.year} · {course.credit_hours} credits
+            {course.category} · ${course.price ?? 'Free'}
           </p>
         </div>
       </header>

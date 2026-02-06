@@ -12,7 +12,7 @@ const formatPrice = (price?: number | null) => {
   return `$${Number(price).toFixed(0)}`;
 };
 
-const resolveTitle = (course: Course) => course.title ?? course.name ?? 'Untitled Course';
+const resolveTitle = (course: Course) => course.title ?? 'Untitled Course';
 const resolveDescription = (course: Course) =>
   course.description ?? 'A guided course built for modern learners.';
 const resolveCategory = (course: Course) => course.category ?? 'General';
@@ -30,7 +30,7 @@ const LandingPage = () => {
         const data = await courseApi.getCourses();
         setCourses(data);
       } catch (err) {
-        console.error(err);
+
         setError('Could not load courses.');
       } finally {
         setLoading(false);

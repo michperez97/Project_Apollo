@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../types/auth';
 import { enrollStudent, getEnrollments } from '../services/enrollmentService';
+import { notifyEnrollmentCreated } from '../services/notificationService';
 
 export const listEnrollmentsHandler = async (
   req: AuthenticatedRequest,
@@ -33,6 +34,7 @@ export const enrollHandler = async (
     }
 
     const enrollment = await enrollStudent(Number(targetStudentId), Number(course_id));
+    await notifyEnrollmentCreated(enrollment);
     return res.status(201).json({ enrollment });
   } catch (error) {
     if (error instanceof Error) {
@@ -46,5 +48,4 @@ export const enrollHandler = async (
     return next(error);
   }
 };
-
 

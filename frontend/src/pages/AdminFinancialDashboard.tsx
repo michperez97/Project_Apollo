@@ -38,7 +38,7 @@ const AdminFinancialDashboard = () => {
         setStudents(studentsData);
         setTransactions(transactionsData);
       } catch (err) {
-        console.error(err);
+
         setError('Failed to load financial data.');
       } finally {
         setLoading(false);

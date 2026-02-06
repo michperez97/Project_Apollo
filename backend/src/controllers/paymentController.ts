@@ -19,6 +19,7 @@ import {
   findTransactionByStripePaymentId,
   updateTransactionStatusByStripeId
 } from '../models/transactionModel';
+import { notifyEnrollmentCreated, notifyPaymentSucceeded, notifyRefund } from '../services/notificationService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const CHECKOUT_SUCCESS_URL =
@@ -161,6 +162,7 @@ export const createCheckoutSessionHandler = async (
         tuition_amount: 0,
         payment_status: 'paid'
       });
+      await notifyEnrollmentCreated(enrollment);
       return res.status(201).json({ enrollment, checkout: null });
     }
 
@@ -259,6 +261,14 @@ export const paymentWebhookHandler = async (req: Request, res: Response) => {
         payment_status: 'paid'
       });
 
+      if (course) {
+        await notifyPaymentSucceeded({
+          studentId,
+          course,
+          amount: amountDollars
+        });
+      }
+
       return res.json({ received: true, transactionCreated });
     }
 
@@ -266,7 +276,11 @@ export const paymentWebhookHandler = async (req: Request, res: Response) => {
       const intent = event.data.object as Stripe.PaymentIntent;
       const enrollmentId = parseMetadataNumber(intent.metadata, 'enrollment_id');
       const studentId = parseMetadataNumber(intent.metadata, 'student_id');
+      const courseId = parseMetadataNumber(intent.metadata, 'course_id');
       const amountDollars = toDollars(intent.amount_received || intent.amount);
+
+      const existingTransaction = await findTransactionByStripePaymentId(intent.id);
+      const alreadyCompleted = existingTransaction?.status === 'completed';
 
       const transaction =
         (await updateTransactionStatusByStripeId(intent.id, 'completed', 'Payment succeeded')) ||
@@ -283,6 +297,24 @@ export const paymentWebhookHandler = async (req: Request, res: Response) => {
 
       if (enrollmentId) {
         await updateEnrollmentPaymentStatus(enrollmentId, 'paid');
+      }
+
+      if (studentId !== null && !alreadyCompleted) {
+        let course = courseId ? await getCourseById(courseId) : null;
+        if (!course && enrollmentId) {
+          const enrollment = await getEnrollmentById(enrollmentId);
+          if (enrollment) {
+            course = await getCourseById(enrollment.course_id);
+          }
+        }
+
+        if (course) {
+          await notifyPaymentSucceeded({
+            studentId,
+            course,
+            amount: amountDollars
+          });
+        }
       }
 
       return res.json({ received: true, transaction });
@@ -314,9 +346,16 @@ export const paymentWebhookHandler = async (req: Request, res: Response) => {
 
       const enrollmentId = parseMetadataNumber(charge.metadata, 'enrollment_id');
       const studentId = parseMetadataNumber(charge.metadata, 'student_id');
+      const courseId = parseMetadataNumber(charge.metadata, 'course_id');
       const refundedAmount = charge.amount_refunded ?? charge.amount;
       const amountDollars = toDollars(refundedAmount);
       const isFullRefund = charge.amount_refunded >= charge.amount;
+
+      let alreadyRefunded = false;
+      if (paymentIntentId) {
+        const existingTransaction = await findTransactionByStripePaymentId(paymentIntentId);
+        alreadyRefunded = existingTransaction?.status === 'refunded';
+      }
 
       if (paymentIntentId) {
         await updateTransactionStatusByStripeId(
@@ -337,6 +376,24 @@ export const paymentWebhookHandler = async (req: Request, res: Response) => {
 
       if (enrollmentId) {
         await updateEnrollmentPaymentStatus(enrollmentId, isFullRefund ? 'pending' : 'partial');
+      }
+
+      if (studentId !== null && !alreadyRefunded) {
+        let course = courseId ? await getCourseById(courseId) : null;
+        if (!course && enrollmentId) {
+          const enrollment = await getEnrollmentById(enrollmentId);
+          if (enrollment) {
+            course = await getCourseById(enrollment.course_id);
+          }
+        }
+
+        if (course) {
+          await notifyRefund({
+            studentId,
+            course,
+            amount: amountDollars
+          });
+        }
       }
 
       return res.json({ received: true });

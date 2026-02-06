@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,18 +7,32 @@ import * as courseApi from '../services/courses';
 import * as enrollmentApi from '../services/enrollments';
 import * as paymentApi from '../services/payments';
 import * as announcementApi from '../services/announcements';
+import * as assistantApi from '../services/assistant';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert, EmptyState } from '../components/Alerts';
 
 const defaultCourseForm = {
-  code: '',
-  name: '',
+  title: '',
   description: '',
-  credit_hours: 3,
-  price_per_credit: 100,
-  teacher_id: '',
-  semester: 'Fall',
-  year: new Date().getFullYear()
+  category: '',
+  price: 0,
+};
+
+type ChatRole = 'user' | 'assistant';
+
+type ChatMessage = {
+  id: string;
+  role: ChatRole;
+  content: string;
+  courses?: Course[];
+};
+
+const createMessageId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+const initialAssistantMessage: ChatMessage = {
+  id: createMessageId(),
+  role: 'assistant',
+  content: 'Welcome back. Ask me to find courses by topic and I will share direct links.'
 };
 
 const DashboardPage = () => {
@@ -46,6 +60,11 @@ const DashboardPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([initialAssistantMessage]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatSending, setChatSending] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const paymentStatusClass = (status: Enrollment['payment_status']) => {
     switch (status) {
@@ -87,6 +106,10 @@ const DashboardPage = () => {
   }, []);
 
   useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, chatSending]);
+
+  useEffect(() => {
     const load = async () => {
       if (!user) return;
       setLoading(true);
@@ -113,7 +136,7 @@ const DashboardPage = () => {
           setTransactions(results[4] as Transaction[]);
         }
       } catch (err) {
-        console.error(err);
+
         setError('Failed to load dashboard data.');
       } finally {
         setLoading(false);
@@ -128,28 +151,18 @@ const DashboardPage = () => {
     setCourseSaving(true);
     setError(null);
     try {
-      const creditHours = Number(courseForm.credit_hours);
-      const pricePerCredit = Number(courseForm.price_per_credit);
-      const payload: Omit<Course, 'id'> = {
-        title: courseForm.name,
+      const payload = {
+        title: courseForm.title,
         description: courseForm.description,
-        category: courseForm.code || 'General',
-        price: creditHours * pricePerCredit,
-        instructor_id: courseForm.teacher_id ? Number(courseForm.teacher_id) : null,
-        code: courseForm.code,
-        name: courseForm.name,
-        credit_hours: creditHours,
-        price_per_credit: pricePerCredit,
-        teacher_id: courseForm.teacher_id ? Number(courseForm.teacher_id) : null,
-        semester: courseForm.semester,
-        year: Number(courseForm.year)
+        category: courseForm.category || 'General',
+        price: Number(courseForm.price),
       };
       const created = await courseApi.createCourse(payload);
       setCourses((prev) => [created, ...prev]);
       setCourseForm(defaultCourseForm);
     } catch (err) {
-      console.error(err);
-      setError('Could not create course (maybe code already exists).');
+
+      setError('Could not create course.');
     } finally {
       setCourseSaving(false);
     }
@@ -161,7 +174,7 @@ const DashboardPage = () => {
       await courseApi.deleteCourse(id);
       setCourses((prev) => prev.filter((c) => c.id !== id));
     } catch (err) {
-      console.error(err);
+
       setError('Failed to delete course.');
     }
   };
@@ -186,7 +199,7 @@ const DashboardPage = () => {
       setEnrollCourseId('');
       setEnrollStudentId('');
     } catch (err) {
-      console.error(err);
+
       setError('Could not enroll (maybe already enrolled).');
     } finally {
       setEnrolling(false);
@@ -208,7 +221,7 @@ const DashboardPage = () => {
       const session = await paymentApi.createPaymentIntent(enrollmentId);
       setPaymentSession(session);
     } catch (err) {
-      console.error(err);
+
       setPaymentError('Could not start payment. Try again later.');
       setPayingEnrollmentId(null);
     } finally {
@@ -262,6 +275,37 @@ const DashboardPage = () => {
     }
 
     setPaymentBusy(false);
+  };
+
+  const handleChatSend = async (override?: string) => {
+    const content = (override ?? chatInput).trim();
+    if (!content || chatSending) return;
+
+    const userMessage: ChatMessage = {
+      id: createMessageId(),
+      role: 'user',
+      content
+    };
+
+    setChatMessages((prev) => [...prev, userMessage]);
+    setChatInput('');
+    setChatError(null);
+    setChatSending(true);
+
+    try {
+      const data = await assistantApi.sendAssistantMessage(content);
+      const assistantMessage: ChatMessage = {
+        id: createMessageId(),
+        role: 'assistant',
+        content: data.reply,
+        courses: data.courses
+      };
+      setChatMessages((prev) => [...prev, assistantMessage]);
+    } catch (err) {
+      setChatError('Apollo AI is unavailable. Please try again.');
+    } finally {
+      setChatSending(false);
+    }
   };
 
   if (!user) return null;
@@ -504,20 +548,17 @@ const DashboardPage = () => {
                     {courses.map((course) => (
                       <div key={course.id} className="glass-card p-0 rounded-2xl flex flex-col sm:flex-row overflow-hidden group border border-zinc-200 hover:border-acid/50 shadow-sm hover:shadow-md">
                         <div className="w-full sm:w-40 h-24 sm:h-auto bg-zinc-100 relative overflow-hidden flex items-center justify-center">
-                          <span className="txt-label">{course.category || course.code}</span>
+                          <span className="txt-label">{course.category}</span>
                         </div>
                         <div className="p-4 flex-1 flex flex-col justify-between bg-white/50">
                           <div>
                             <h3 className="text-base text-zinc-900 font-bold group-hover:text-lime-600 transition-colors tracking-tight">
-                              {course.name || course.title}
+                              {course.title}
                             </h3>
                             <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{course.description}</p>
                             <div className="flex items-center gap-3 mt-2">
                               <span className="text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 font-medium">
-                                {course.credit_hours} credits
-                              </span>
-                              <span className="text-xs text-zinc-400 font-medium">
-                                ${course.price_per_credit}/credit
+                                ${course.price ?? 0}
                               </span>
                             </div>
                           </div>
@@ -555,62 +596,30 @@ const DashboardPage = () => {
                       </h3>
                       <form className="grid sm:grid-cols-2 gap-4" onSubmit={handleCreateCourse}>
                         <div>
-                          <label className="txt-label mb-1 block">Code</label>
+                          <label className="txt-label mb-1 block">Title</label>
                           <input
                             className="input"
-                            value={courseForm.code}
-                            onChange={(e) => setCourseForm((p) => ({ ...p, code: e.target.value }))}
+                            value={courseForm.title}
+                            onChange={(e) => setCourseForm((p) => ({ ...p, title: e.target.value }))}
                             required
                           />
                         </div>
                         <div>
-                          <label className="txt-label mb-1 block">Name</label>
+                          <label className="txt-label mb-1 block">Category</label>
                           <input
                             className="input"
-                            value={courseForm.name}
-                            onChange={(e) => setCourseForm((p) => ({ ...p, name: e.target.value }))}
-                            required
+                            value={courseForm.category}
+                            onChange={(e) => setCourseForm((p) => ({ ...p, category: e.target.value }))}
                           />
                         </div>
                         <div>
-                          <label className="txt-label mb-1 block">Credit Hours</label>
-                          <input
-                            className="input"
-                            type="number"
-                            min={1}
-                            value={courseForm.credit_hours}
-                            onChange={(e) => setCourseForm((p) => ({ ...p, credit_hours: Number(e.target.value) }))}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="txt-label mb-1 block">Price/Credit</label>
+                          <label className="txt-label mb-1 block">Price</label>
                           <input
                             className="input"
                             type="number"
                             min={0}
-                            value={courseForm.price_per_credit}
-                            onChange={(e) => setCourseForm((p) => ({ ...p, price_per_credit: Number(e.target.value) }))}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="txt-label mb-1 block">Semester</label>
-                          <input
-                            className="input"
-                            value={courseForm.semester}
-                            onChange={(e) => setCourseForm((p) => ({ ...p, semester: e.target.value }))}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="txt-label mb-1 block">Year</label>
-                          <input
-                            className="input"
-                            type="number"
-                            min={2024}
-                            value={courseForm.year}
-                            onChange={(e) => setCourseForm((p) => ({ ...p, year: Number(e.target.value) }))}
+                            value={courseForm.price}
+                            onChange={(e) => setCourseForm((p) => ({ ...p, price: Number(e.target.value) }))}
                             required
                           />
                         </div>
@@ -733,7 +742,7 @@ const DashboardPage = () => {
                           <option value="">Choose...</option>
                           {courses.map((course) => (
                             <option key={course.id} value={course.id}>
-                              {course.code} - {course.name}
+                              {course.title}
                             </option>
                           ))}
                         </select>
@@ -854,43 +863,113 @@ const DashboardPage = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-5 text-sm scroll-smooth bg-zinc-50/50">
-            <div className="flex justify-center">
-              <span className="text-[10px] font-mono text-zinc-400 bg-white px-2 py-1 rounded border border-zinc-200">
-                TODAY, 11:30 AM
-              </span>
-            </div>
-
-            <div className="flex gap-4 items-start animate-fade-in-up">
-              <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
-                <svg className="w-4 h-4 text-zinc-500" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4zm-2 6V6a2 2 0 1 1 4 0v2h-4z" />
-                </svg>
-              </div>
-              <div className="flex flex-col gap-1 max-w-[85%]">
-                <span className="text-[10px] text-zinc-400 font-bold ml-1">APOLLO</span>
-                <div className="bg-white border border-zinc-100 p-3.5 rounded-2xl rounded-tl-none text-zinc-600 text-sm shadow-sm leading-relaxed">
-                  <p>Welcome back. I can help summarize your course activity or highlight upcoming tasks.</p>
-                  <div className="mt-3 pt-3 border-t border-zinc-100 flex gap-2">
-                    <button className="text-[11px] bg-zinc-50 hover:bg-acid/10 hover:text-lime-700 hover:border-acid/20 border border-zinc-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                      Show Summary
-                    </button>
-                    <button className="text-[11px] bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                      Upcoming Tasks
-                    </button>
+            {chatMessages.map((message, index) => {
+              const isAssistant = message.role === 'assistant';
+              return (
+                <div
+                  key={message.id}
+                  className={`flex gap-4 items-start animate-fade-in-up ${isAssistant ? '' : 'justify-end'}`}
+                >
+                  {isAssistant && (
+                    <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4 text-zinc-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4zm-2 6V6a2 2 0 1 1 4 0v2h-4z" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className={`flex flex-col gap-1 max-w-[85%] ${isAssistant ? '' : 'items-end'}`}>
+                    <span
+                      className={`text-[10px] font-bold ${isAssistant ? 'text-zinc-400 ml-1' : 'text-zinc-500 mr-1'}`}
+                    >
+                      {isAssistant ? 'APOLLO' : 'YOU'}
+                    </span>
+                    <div
+                      className={`p-3.5 rounded-2xl text-sm shadow-sm leading-relaxed ${
+                        isAssistant
+                          ? 'bg-white border border-zinc-100 text-zinc-600 rounded-tl-none'
+                          : 'bg-zinc-900 text-white rounded-tr-none'
+                      }`}
+                    >
+                      <p className="whitespace-pre-line">{message.content}</p>
+                      {message.courses && message.courses.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-zinc-100 grid gap-2">
+                          {message.courses.slice(0, 3).map((course) => (
+                            <Link
+                              key={course.id}
+                              to={`/course/${course.id}`}
+                              className="border border-zinc-200 rounded-xl p-2 bg-white/90 hover:bg-white transition-colors"
+                            >
+                              <p className="text-xs font-semibold text-zinc-900">{course.title}</p>
+                              <p className="text-[10px] text-zinc-500">
+                                {course.category ?? 'General'} · {course.price && course.price > 0 ? `$${course.price}` : 'Free'}
+                              </p>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                      {isAssistant && index === 0 && (
+                        <div className="mt-3 pt-3 border-t border-zinc-100 flex gap-2">
+                          <button
+                            onClick={() => handleChatSend('Find courses about data science')}
+                            className="text-[11px] bg-zinc-50 hover:bg-acid/10 hover:text-lime-700 hover:border-acid/20 border border-zinc-200 px-3 py-1.5 rounded-lg transition-colors font-medium"
+                          >
+                            Data Science
+                          </button>
+                          <button
+                            onClick={() => handleChatSend('Find courses about project management')}
+                            className="text-[11px] bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 px-3 py-1.5 rounded-lg transition-colors font-medium"
+                          >
+                            Project Mgmt
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  {!isAssistant && (
+                    <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.33 0-6 1.34-6 3v1h12v-1c0-1.66-2.67-3-6-3z" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
+              );
+            })}
+            {chatSending && (
+              <div className="flex items-center gap-2 text-xs text-zinc-400">
+                <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Apollo AI is typing...
               </div>
-            </div>
+            )}
+            {chatError && (
+              <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {chatError}
+              </div>
+            )}
+            <div ref={chatEndRef} />
           </div>
 
           <div className="p-4 bg-white border-t border-zinc-100">
             <div className="relative">
               <input
                 type="text"
-                placeholder="Ask about courses, schedule, or content..."
-                className="w-full bg-white border border-zinc-200 rounded-xl pl-4 pr-12 py-3.5 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-100 focus:border-zinc-300 shadow-sm transition-all font-medium"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleChatSend();
+                  }
+                }}
+                disabled={chatSending}
+                placeholder="Ask for courses by topic..."
+                className="w-full bg-white border border-zinc-200 rounded-xl pl-4 pr-12 py-3.5 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-100 focus:border-zinc-300 shadow-sm transition-all font-medium disabled:opacity-60"
               />
-              <button className="absolute right-2 top-2 p-1.5 bg-zinc-900 text-white rounded-lg hover:bg-acid hover:text-black transition-colors shadow-sm">
+              <button
+                onClick={() => handleChatSend()}
+                disabled={!chatInput.trim() || chatSending}
+                className="absolute right-2 top-2 p-1.5 bg-zinc-900 text-white rounded-lg hover:bg-acid hover:text-black transition-colors shadow-sm disabled:opacity-50"
+              >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M2 21l20-9L2 3v7l14 2-14 2v7z" />
                 </svg>

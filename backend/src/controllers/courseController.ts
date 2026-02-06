@@ -82,9 +82,6 @@ export const createCourseHandler = async (
     const course = await createCourse(payload);
     return res.status(201).json({ course });
   } catch (error) {
-    if (error instanceof Error && error.message.includes('duplicate key value')) {
-      return res.status(409).json({ error: 'Course code already exists' });
-    }
     return next(error);
   }
 };

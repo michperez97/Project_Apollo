@@ -1,4 +1,4 @@
-import { api, getApiBaseUrl } from './http';
+import { api } from './http';
 
 type SignResponse = {
   timestamp: number;

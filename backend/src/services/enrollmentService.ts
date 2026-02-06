@@ -12,7 +12,7 @@ export const calculateTuition = async (courseId: number): Promise<number> => {
   if (!course) {
     throw new Error('Course not found');
   }
-  return Number(course.credit_hours) * Number(course.price_per_credit);
+  return Number(course.price) || 0;
 };
 
 export const enrollStudent = async (

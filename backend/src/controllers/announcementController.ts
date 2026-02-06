@@ -8,6 +8,7 @@ import {
   updateAnnouncement,
   deleteAnnouncement
 } from '../models/announcementModel';
+import { notifyAnnouncement } from '../services/notificationService';
 
 export const createAnnouncementHandler = async (
   req: AuthenticatedRequest,
@@ -38,6 +39,7 @@ export const createAnnouncementHandler = async (
       message
     });
 
+    await notifyAnnouncement(announcement);
     return res.status(201).json({ announcement });
   } catch (error) {
     return next(error);

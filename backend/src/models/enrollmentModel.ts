@@ -18,6 +18,13 @@ export interface EnrollmentInput {
   payment_status?: 'pending' | 'paid' | 'partial';
 }
 
+export interface EnrolledStudentRecord {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
 export const createEnrollment = async (input: EnrollmentInput): Promise<EnrollmentRecord> => {
   const { student_id, course_id, tuition_amount, payment_status = 'pending' } = input;
   const result = await pool.query<EnrollmentRecord>(
@@ -78,4 +85,17 @@ export const getEnrollmentByStudentAndCourse = async (
   return result.rows[0] ?? null;
 };
 
+export const listPaidStudentsByCourse = async (
+  courseId: number
+): Promise<EnrolledStudentRecord[]> => {
+  const result = await pool.query<EnrolledStudentRecord>(
+    `SELECT DISTINCT u.id, u.email, u.first_name, u.last_name
+     FROM enrollments e
+     JOIN users u ON u.id = e.student_id
+     WHERE e.course_id = $1 AND e.payment_status = 'paid'
+     ORDER BY u.last_name, u.first_name`,
+    [courseId]
+  );
+  return result.rows;
+};
 

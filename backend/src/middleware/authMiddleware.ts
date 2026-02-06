@@ -2,9 +2,13 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../types/auth';
 import { verifyToken } from '../services/authService';
 
-export const authenticate = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+const extractBearerToken = (req: AuthenticatedRequest): string | undefined => {
   const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
+  return authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
+};
+
+export const authenticate = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const token = extractBearerToken(req);
 
   if (!token) {
     return res.status(401).json({ error: 'Authentication required' });
@@ -20,8 +24,7 @@ export const authenticate = (req: AuthenticatedRequest, res: Response, next: Nex
 };
 
 export const optionalAuthenticate = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
+  const token = extractBearerToken(req);
 
   if (!token) {
     return next();

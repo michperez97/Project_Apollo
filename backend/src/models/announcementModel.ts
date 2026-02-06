@@ -59,7 +59,7 @@ export const updateAnnouncement = async (
   updates: { title?: string; message?: string }
 ): Promise<AnnouncementRecord | null> => {
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: (string | number)[] = [];
   let paramIndex = 1;
 
   if (updates.title !== undefined) {

@@ -20,7 +20,7 @@ const LoginPage = () => {
       const redirectTo = (location.state as { from?: Location })?.from?.pathname ?? '/dashboard';
       navigate(redirectTo);
     } catch (err) {
-      console.error(err);
+
       setError('Invalid credentials');
     } finally {
       setLoading(false);

@@ -27,7 +27,7 @@ const RegisterPage = () => {
       await register(form);
       navigate('/dashboard');
     } catch (err) {
-      console.error(err);
+
       setError('Could not create account. Try a different email.');
     } finally {
       setLoading(false);

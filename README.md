@@ -113,6 +113,16 @@ Override options for `npm run seed`:
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`
+- `EMAIL_PROVIDER` - Email provider (`sendgrid`, `log`, or `disabled`)
+- `EMAIL_FROM` - Default sender address (e.g., `no-reply@apollo.local`)
+- `EMAIL_REPLY_TO` - Optional reply-to address
+- `SENDGRID_API_KEY` - SendGrid API key (required if `EMAIL_PROVIDER=sendgrid`)
+- `LLM_PROVIDER` - LLM provider (`openai_compatible` or `disabled`)
+- `LLM_BASE_URL` - Base URL for chat completions (e.g., `http://localhost:11434/v1`)
+- `LLM_MODEL` - Model name to use for assistant responses
+- `LLM_API_KEY` - API key for hosted LLMs (optional for local)
+- `LLM_TIMEOUT_MS` - LLM request timeout in milliseconds
+- `ASSISTANT_MAX_COURSES` - Max courses to return in assistant results
 - `SEED_ADMIN_EMAIL`
 - `SEED_INSTRUCTOR_EMAIL`
 - `SEED_STUDENT_EMAIL`
