@@ -16,6 +16,7 @@ import progressRoutes from './progressRoutes';
 import assistantRoutes from './assistantRoutes';
 import quizRoutes from './quizRoutes';
 import certificateRoutes from './certificateRoutes';
+import profileRoutes from './profileRoutes';
 
 const router = Router();
 
@@ -36,5 +37,6 @@ router.use('/lessons', progressRoutes);
 router.use('/assistant', assistantRoutes);
 router.use('/quizzes', quizRoutes);
 router.use('/certificates', certificateRoutes);
+router.use('/profiles', profileRoutes);
 
 export default router;

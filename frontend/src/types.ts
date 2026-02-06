@@ -135,6 +135,22 @@ export interface StudentBalanceDetail extends StudentBalance {
   enrollment_count: number;
 }
 
+export interface InstructorProfile {
+  id?: number;
+  user_id: number;
+  avatar_url: string | null;
+  headline: string | null;
+  bio: string | null;
+  specializations: string | null;
+  website_url: string | null;
+  linkedin_url: string | null;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Announcement {
   id: number;
   course_id: number;
