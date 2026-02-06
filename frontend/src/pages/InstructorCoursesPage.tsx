@@ -44,19 +44,30 @@ const InstructorCoursesPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (!user || (user.role !== 'instructor' && user.role !== 'admin')) {
-      navigate('/dashboard');
+    if (!user) {
+      console.log('InstructorCoursesPage: No user found');
+      return;
+    }
+
+    console.log('InstructorCoursesPage: User role:', user.role);
+
+    if (user.role !== 'instructor' && user.role !== 'admin') {
+      console.log('InstructorCoursesPage: User is not instructor/admin, redirecting');
+      setError('Access denied. You must be an instructor or admin.');
+      setTimeout(() => navigate('/dashboard'), 2000);
       return;
     }
 
     const load = async () => {
+      console.log('InstructorCoursesPage: Loading courses...');
       setLoading(true);
       setError(null);
       try {
         const data = await courseApi.getInstructorCourses();
+        console.log('InstructorCoursesPage: Courses loaded:', data);
         setCourses(data);
       } catch (err) {
-        console.error(err);
+        console.error('InstructorCoursesPage: Error loading courses:', err);
         setError('Failed to load courses.');
       } finally {
         setLoading(false);
@@ -171,7 +182,13 @@ const InstructorCoursesPage = () => {
     }
   };
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingCard message="Loading..." />
+      </div>
+    );
+  }
 
   const draftCount = courses.filter(c => c.status === 'draft').length;
   const pendingCount = courses.filter(c => c.status === 'pending').length;
@@ -464,7 +481,7 @@ const InstructorCoursesPage = () => {
                             </div>
                             <p className="text-sm text-zinc-500 mt-1 line-clamp-2">{course.description}</p>
                             <p className="text-sm font-semibold text-zinc-900 mt-2 font-mono">
-                              {course.price == null || course.price === 0 ? 'Free' : `$${course.price.toFixed(0)}`}
+                              {course.price == null || Number(course.price) === 0 ? 'Free' : `$${Number(course.price).toFixed(0)}`}
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2 mt-3">
@@ -474,6 +491,12 @@ const InstructorCoursesPage = () => {
                             >
                               Edit
                             </button>
+                            <Link
+                              to={`/instructor/courses/${course.id}/quizzes`}
+                              className="btn-secondary text-xs py-1.5"
+                            >
+                              Manage Quizzes
+                            </Link>
                             {(course.status === 'draft' || course.status === 'rejected') && (
                               <button
                                 className="btn-accent text-xs py-1.5"

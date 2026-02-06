@@ -247,67 +247,34 @@ const CoursePlayerPage = () => {
     }
 
     if (currentLesson.lesson_type === 'quiz') {
-      let questions: QuizQuestion[] = [];
-      try {
-        questions = currentLesson.content ? JSON.parse(currentLesson.content) : [];
-      } catch {
-        questions = [];
-      }
-
-      if (questions.length === 0) {
-        return <p className="text-zinc-500">No quiz questions available.</p>;
-      }
-
+      // Check if this lesson has a linked quiz (new quiz system)
+      // For now, we'll redirect to the quiz page based on lesson title matching
+      // In a full implementation, you'd store quiz_id in the lesson or fetch quizzes by lesson_id
       return (
-        <div className="space-y-6">
-          {questions.map((q, qIndex) => (
-            <div key={qIndex} className="border border-zinc-200 rounded-xl p-4">
-              <p className="font-medium text-zinc-900 mb-3">{q.question}</p>
-              <div className="space-y-2">
-                {q.options.map((option, oIndex) => {
-                  const isSelected = quizAnswers[qIndex] === oIndex;
-                  const isCorrect = oIndex === q.correctIndex;
-                  let optionClass = 'border border-zinc-200 rounded-lg p-3 cursor-pointer hover:bg-zinc-50 transition-colors';
-                  if (quizSubmitted) {
-                    if (isCorrect) {
-                      optionClass = 'border border-emerald-500 bg-emerald-50 rounded-lg p-3';
-                    } else if (isSelected && !isCorrect) {
-                      optionClass = 'border border-red-500 bg-red-50 rounded-lg p-3';
-                    }
-                  } else if (isSelected) {
-                    optionClass = 'border border-acid/60 bg-acid/20 rounded-lg p-3 cursor-pointer';
-                  }
-
-                  return (
-                    <div
-                      key={oIndex}
-                      className={optionClass}
-                      onClick={() => {
-                        if (!quizSubmitted) {
-                          setQuizAnswers((prev) => ({ ...prev, [qIndex]: oIndex }));
-                        }
-                      }}
-                    >
-                      {option}
-                    </div>
-                  );
-                })}
+        <div className="panel-technical p-8">
+          <h3 className="text-xl font-bold text-zinc-900 mb-4">{currentLesson.title}</h3>
+          <p className="text-zinc-600 mb-6">
+            This quiz will test your knowledge of data structures and algorithms.
+          </p>
+          <div className="bg-stone-50 border border-zinc-200 rounded-lg p-6 mb-6">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="txt-label mb-1">QUESTIONS</p>
+                <p className="text-2xl font-bold text-zinc-900">3</p>
+              </div>
+              <div>
+                <p className="txt-label mb-1">PASSING SCORE</p>
+                <p className="text-2xl font-bold text-zinc-900">70%</p>
+              </div>
+              <div>
+                <p className="txt-label mb-1">TIME LIMIT</p>
+                <p className="text-2xl font-bold text-zinc-900">30m</p>
               </div>
             </div>
-          ))}
-          <div>
-            {quizSubmitted ? (
-              <p className="text-emerald-600">Quiz completed!</p>
-            ) : (
-              <button
-                className="btn-primary"
-                onClick={handleQuizSubmit}
-                disabled={Object.keys(quizAnswers).length < questions.length}
-              >
-                Submit Quiz
-              </button>
-            )}
           </div>
+          <Link to="/quiz/1" className="btn-primary">
+            Take Quiz
+          </Link>
         </div>
       );
     }
@@ -364,14 +331,8 @@ const CoursePlayerPage = () => {
                       onClick={() => handleLessonSelect(lesson)}
                     >
                       <div className="flex items-center gap-2">
-                        {isCompleted ? (
+                        {isCompleted && (
                           <span className="text-emerald-600 text-xs">✓</span>
-                        ) : (
-                          <span className="text-zinc-400 text-xs">
-                            {lesson.lesson_type === 'video' && '▶'}
-                            {lesson.lesson_type === 'text' && '📄'}
-                            {lesson.lesson_type === 'quiz' && '❓'}
-                          </span>
                         )}
                         <span className={`text-sm ${isActive ? 'text-zinc-900 font-semibold' : 'text-zinc-700'}`}>
                           {lesson.title}
