@@ -15,6 +15,8 @@ import QuizPage from './pages/QuizPage';
 import CertificatePage from './pages/CertificatePage';
 import InstructorQuizBuilder from './pages/InstructorQuizBuilder';
 import CourseBuilderPage from './pages/CourseBuilderPage';
+import ProfilePage from './pages/ProfilePage';
+import InstructorPublicProfile from './pages/InstructorPublicProfile';
 
 const App = () => {
   return (
@@ -111,6 +113,15 @@ const App = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/instructor/:userId" element={<InstructorPublicProfile />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

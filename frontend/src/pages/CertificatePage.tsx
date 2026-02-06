@@ -33,8 +33,8 @@ const CertificatePage = () => {
   };
 
   if (loading) return <LoadingCard />;
-  if (error) return <Alert type="error">{error}</Alert>;
-  if (!certificate) return <Alert type="error">Certificate not found</Alert>;
+  if (error) return <Alert type="error" message={error} />;
+  if (!certificate) return <Alert type="error" message="Certificate not found" />;
 
   return (
     <div className="min-h-screen bg-stone-100 py-12 px-4 print:bg-white">
