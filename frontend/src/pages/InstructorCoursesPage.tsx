@@ -43,6 +43,8 @@ const InstructorCoursesPage = () => {
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -171,6 +173,22 @@ const InstructorCoursesPage = () => {
       setError('Failed to submit course for review.');
     } finally {
       setSubmitting(null);
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: number) => {
+    setDeleting(courseId);
+    setError(null);
+    setSuccess(null);
+    try {
+      await courseApi.deleteCourse(courseId);
+      setCourses((prev) => prev.filter((c) => c.id !== courseId));
+      setSuccess('Course deleted successfully');
+    } catch {
+      setError('Failed to delete course.');
+    } finally {
+      setDeleting(null);
+      setConfirmDeleteId(null);
     }
   };
 
@@ -387,7 +405,7 @@ const InstructorCoursesPage = () => {
                             {course.price == null || Number(course.price) === 0 ? 'Free' : `$${Number(course.price).toFixed(0)}`}
                           </p>
                         </div>
-                        <div className="flex flex-wrap gap-2 mt-3">
+                        <div className="flex flex-wrap items-center gap-2 mt-3">
                           <button
                             className="btn-secondary text-xs py-1.5"
                             onClick={() => handleEdit(course)}
@@ -415,6 +433,12 @@ const InstructorCoursesPage = () => {
                               {submitting === course.id ? 'Submitting...' : 'Submit for Review'}
                             </button>
                           )}
+                          <button
+                            className="ml-auto px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:border-red-300 transition-colors"
+                            onClick={() => setConfirmDeleteId(course.id)}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -534,6 +558,37 @@ const InstructorCoursesPage = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setConfirmDeleteId(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+            <h3 className="text-lg font-bold text-zinc-900 mb-2">Delete Course</h3>
+            <p className="text-sm text-zinc-600 mb-1">
+              Are you sure you want to delete <strong>{courses.find(c => c.id === confirmDeleteId)?.title}</strong>?
+            </p>
+            <p className="text-sm text-red-600 mb-5">
+              This action cannot be undone. All sections, lessons, and associated data will be permanently removed.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                className="btn-secondary text-sm"
+                onClick={() => setConfirmDeleteId(null)}
+                disabled={deleting === confirmDeleteId}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                onClick={() => handleDeleteCourse(confirmDeleteId)}
+                disabled={deleting === confirmDeleteId}
+              >
+                {deleting === confirmDeleteId ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>

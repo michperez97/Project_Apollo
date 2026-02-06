@@ -15,7 +15,7 @@ router.get('/', optionalAuthenticate, getCourses);
 router.get('/:id', optionalAuthenticate, getCourse);
 router.post('/', authenticate, authorizeRoles('admin', 'instructor'), createCourseHandler);
 router.put('/:id', authenticate, authorizeRoles('admin', 'instructor'), updateCourseHandler);
-router.delete('/:id', authenticate, authorizeRoles('admin'), deleteCourseHandler);
+router.delete('/:id', authenticate, authorizeRoles('admin', 'instructor'), deleteCourseHandler);
 router.post('/:id/submit', authenticate, authorizeRoles('admin', 'instructor'), submitCourseHandler);
 
 export default router;
