@@ -334,53 +334,56 @@ const DashboardPage = () => {
           ) : (
             <>
               {/* Stat Cards */}
-              <div className={`grid grid-cols-1 ${isInstructorView ? 'md:grid-cols-3' : 'md:grid-cols-4'} gap-5 mb-8`}>
+              <div className={`grid grid-cols-1 ${isInstructorView ? 'grid-cols-3 gap-3 mb-6' : 'md:grid-cols-4 gap-5 mb-8'}`}>
                 {isInstructorView ? (
                   <>
                     {/* My Courses Stat */}
-                    <div className="stat-card animate-fade-in-up delay-100 group">
-                      <div className="flex justify-between items-start mb-5">
-                        <div className="p-2.5 bg-acid/10 rounded-xl text-lime-600 border border-acid/20">
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="glass-card p-4 rounded-xl animate-fade-in-up delay-100 group">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-acid/10 rounded-lg text-lime-600 border border-acid/20">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
                           </svg>
                         </div>
-                        <span className="txt-label group-hover:text-lime-600 transition-colors">My Courses</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="txt-label group-hover:text-lime-600 transition-colors">My Courses</span>
+                          <h3 className="text-2xl font-bold text-zinc-900 font-mono tracking-tight leading-tight">{courses.length}</h3>
+                        </div>
                       </div>
-                      <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">{courses.length}</h3>
-                      <p className="text-xs text-zinc-500 mt-1 font-medium">Total</p>
                     </div>
 
                     {/* Published Stat */}
-                    <div className="stat-card animate-fade-in-up delay-200 group">
-                      <div className="flex justify-between items-start mb-5">
-                        <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600 border border-emerald-500/20">
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="glass-card p-4 rounded-xl animate-fade-in-up delay-200 group">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-600 border border-emerald-500/20">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
                           </svg>
                         </div>
-                        <span className="txt-label">Published</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="txt-label">Published</span>
+                          <h3 className="text-2xl font-bold text-zinc-900 font-mono tracking-tight leading-tight">
+                            {courses.filter(c => c.status === 'approved').length}
+                          </h3>
+                        </div>
                       </div>
-                      <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">
-                        {courses.filter(c => c.status === 'approved').length}
-                      </h3>
-                      <p className="text-xs text-zinc-500 mt-1 font-medium">Approved</p>
                     </div>
 
                     {/* Pending Review Stat */}
-                    <div className="stat-card animate-fade-in-up delay-300 group">
-                      <div className="flex justify-between items-start mb-5">
-                        <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-600 border border-amber-500/20">
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="glass-card p-4 rounded-xl animate-fade-in-up delay-300 group">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-500/10 rounded-lg text-amber-600 border border-amber-500/20">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" />
                           </svg>
                         </div>
-                        <span className="txt-label">Pending Review</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="txt-label">Pending</span>
+                          <h3 className="text-2xl font-bold text-zinc-900 font-mono tracking-tight leading-tight">
+                            {courses.filter(c => c.status === 'pending').length}
+                          </h3>
+                        </div>
                       </div>
-                      <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">
-                        {courses.filter(c => c.status === 'pending').length}
-                      </h3>
-                      <p className="text-xs text-zinc-500 mt-1 font-medium">Awaiting approval</p>
                     </div>
 
                   </>
@@ -450,14 +453,14 @@ const DashboardPage = () => {
               </div>
 
               {/* Content Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {isInstructorView ? (
                   <>
                     {/* Instructor Main Column - Recent Courses */}
-                    <div className="lg:col-span-2 space-y-6 animate-fade-in-up delay-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <h2 className="text-zinc-900 font-bold flex items-center gap-3 text-lg">
-                          <svg className="w-5 h-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="lg:col-span-2 space-y-4 animate-fade-in-up delay-200">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-zinc-900 font-bold flex items-center gap-2 text-sm">
+                          <svg className="w-4 h-4 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
                           </svg>
                           Recent Courses
@@ -465,7 +468,7 @@ const DashboardPage = () => {
                         <span className="txt-label">{courses.length} Total</span>
                       </div>
 
-                      <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                      <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                         {courses.slice(0, 5).map((course) => {
                           const statusColors: Record<string, string> = {
                             approved: 'bg-emerald-100 text-emerald-800',
@@ -479,36 +482,31 @@ const DashboardPage = () => {
                             <Link
                               key={course.id}
                               to={`/instructor/courses/${course.id}/builder`}
-                              className="glass-card p-0 rounded-2xl flex flex-col sm:flex-row overflow-hidden group border border-zinc-200 hover:border-acid/50 shadow-sm hover:shadow-md cursor-pointer"
+                              className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-zinc-200 hover:border-acid/50 shadow-sm hover:shadow-md transition-all group"
                             >
-                              <div className="w-full sm:w-40 h-24 sm:h-auto bg-zinc-100 relative overflow-hidden flex items-center justify-center">
-                                <span className="txt-label">{course.category ?? 'General'}</span>
+                              <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0">
+                                <svg className="w-4 h-4 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
+                                </svg>
                               </div>
-                              <div className="p-4 flex-1 flex flex-col justify-between bg-white/50">
-                                <div>
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <h3 className="text-base text-zinc-900 font-bold group-hover:text-lime-600 transition-colors tracking-tight">
-                                      {course.title}
-                                    </h3>
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
-                                      {course.status ?? 'draft'}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-3 mt-2">
-                                    <span className="text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 font-medium">
-                                      {course.category ?? 'General'}
-                                    </span>
-                                    <span className="text-xs text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 font-medium">
-                                      ${course.price ?? 0}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 mt-3">
-                                  <span className="text-xs font-semibold text-zinc-700 group-hover:text-lime-600 transition-colors">
-                                    Open in Builder →
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-sm text-zinc-900 font-semibold group-hover:text-lime-600 transition-colors truncate">
+                                    {course.title}
+                                  </h3>
+                                  <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shrink-0 ${statusClass}`}>
+                                    {course.status ?? 'draft'}
                                   </span>
                                 </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-[11px] text-zinc-400 font-medium">{course.category ?? 'General'}</span>
+                                  <span className="text-zinc-300">·</span>
+                                  <span className="text-[11px] text-zinc-400 font-medium">${course.price ?? 0}</span>
+                                </div>
                               </div>
+                              <svg className="w-4 h-4 text-zinc-300 group-hover:text-lime-600 transition-colors shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                              </svg>
                             </Link>
                           );
                         })}
