@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { ZodSchema, ZodError } from 'zod';
+import { ZodType, ZodError } from 'zod';
 
 export const validate =
-  (schema: ZodSchema, source: 'body' | 'query' | 'params' = 'body') =>
+  (schema: ZodType, source: 'body' | 'query' | 'params' = 'body') =>
   (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req[source]);
     if (!result.success) {
-      const errors = result.error.errors.map((e: ZodError['errors'][number]) => ({
+      const errors = result.error.issues.map((e: ZodError['issues'][number]) => ({
         field: e.path.join('.'),
         message: e.message
       }));
