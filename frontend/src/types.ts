@@ -197,3 +197,12 @@ export interface Announcement {
   created_at: string;
   updated_at: string;
 }
+
+export interface NotificationFeedItem {
+  id: string;
+  title: string;
+  message: string;
+  tone: 'info' | 'success' | 'warning';
+  created_at: string;
+  is_read: boolean;
+}
