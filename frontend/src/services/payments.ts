@@ -1,5 +1,5 @@
 import { api } from './http';
-import { Enrollment, PaymentIntentSession, StudentBalance, Transaction, FinancialSummary, StudentBalanceDetail } from '../types';
+import { Enrollment, PaymentIntentSession, StudentBalance, Transaction, FinancialSummary, StudentBalanceDetail, InstructorEarningsSummary, CourseRevenueBreakdown, InstructorTransaction } from '../types';
 
 export interface CheckoutSessionResponse {
   checkout?: { id: string; url: string };
@@ -48,4 +48,19 @@ export const getFinancialSummary = async (): Promise<FinancialSummary> => {
 export const getAllStudentBalances = async (): Promise<StudentBalanceDetail[]> => {
   const { data } = await api.get<{ students: StudentBalanceDetail[] }>('/finance/students');
   return data.students;
+};
+
+export const getInstructorEarnings = async (): Promise<InstructorEarningsSummary> => {
+  const { data } = await api.get<{ earnings: InstructorEarningsSummary }>('/finance/instructor/earnings');
+  return data.earnings;
+};
+
+export const getInstructorCourseRevenue = async (): Promise<CourseRevenueBreakdown[]> => {
+  const { data } = await api.get<{ courses: CourseRevenueBreakdown[] }>('/finance/instructor/courses');
+  return data.courses;
+};
+
+export const getInstructorTransactions = async (): Promise<InstructorTransaction[]> => {
+  const { data } = await api.get<{ transactions: InstructorTransaction[] }>('/finance/instructor/transactions');
+  return data.transactions;
 };

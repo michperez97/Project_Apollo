@@ -151,6 +151,32 @@ export interface InstructorProfile {
   updated_at?: string;
 }
 
+export interface InstructorEarningsSummary {
+  total_revenue: number;
+  total_enrollments: number;
+  active_courses: number;
+  avg_per_course: number;
+  currency: string;
+}
+
+export interface CourseRevenueBreakdown {
+  course_id: number;
+  title: string;
+  price: number;
+  enrollment_count: number;
+  paid_count: number;
+  revenue: number;
+}
+
+export interface InstructorTransaction {
+  transaction_id: number;
+  course_title: string;
+  student_id: number;
+  amount: number;
+  status: string;
+  created_at: string;
+}
+
 export interface Announcement {
   id: number;
   course_id: number;
