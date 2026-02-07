@@ -17,6 +17,8 @@ export interface User {
   subscription_status: SubscriptionStatus;
   current_period_end: string | null;
   stripe_customer_id: string | null;
+  stripe_connect_account_id: string | null;
+  stripe_connect_onboarded_at: string | null;
   created_at: string;
   updated_at: string;
 }

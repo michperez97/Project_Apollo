@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { InstructorProfile } from '../types';
 import * as profileApi from '../services/profiles';
 import { uploadFile } from '../services/uploads';
+import { validateImageFile } from '../utils/fileValidation';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert } from '../components/Alerts';
 import SideNav from '../components/SideNav';
@@ -25,6 +26,7 @@ const ProfilePage = () => {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const maxAvatarFileSizeBytes = 5 * 1024 * 1024;
 
   useEffect(() => {
     const load = async () => {
@@ -51,6 +53,12 @@ const ProfilePage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const validationError = validateImageFile(file, maxAvatarFileSizeBytes);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setUploading(true);
     setError(null);
     try {
@@ -58,10 +66,14 @@ const ProfilePage = () => {
       setAvatarUrl(url);
       await profileApi.updateMyProfile({ avatar_url: url });
       setSuccess('Avatar updated');
-    } catch {
-      setError('Failed to upload avatar.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to upload avatar.';
+      setError(message);
     } finally {
       setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 

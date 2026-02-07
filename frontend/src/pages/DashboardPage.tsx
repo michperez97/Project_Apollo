@@ -326,6 +326,16 @@ const DashboardPage = () => {
   const paidEnrollments = enrollments.filter(e => e.payment_status === 'paid').length;
   const pendingEnrollments = enrollments.filter(e => e.payment_status !== 'paid').length;
   const unreadNotifications = notifications.filter((item) => !item.is_read).length;
+  const categoryCounts = courses.reduce<Record<string, number>>((acc, course) => {
+    const key = (course.category ?? 'General').trim() || 'General';
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
+  const trendingCategoryEntry = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0];
+  const trendingCategoryName = trendingCategoryEntry?.[0] ?? 'No category data';
+  const trendingCategoryCount = trendingCategoryEntry?.[1] ?? 0;
+  const trendingCategoryShare =
+    courses.length > 0 ? Math.round((trendingCategoryCount / courses.length) * 100) : 0;
 
   return (
     <div className="min-h-screen flex">
@@ -384,7 +394,7 @@ const DashboardPage = () => {
               </button>
 
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-[360px] bg-white border border-zinc-200 rounded-2xl shadow-xl overflow-hidden z-30">
+                <div className="notification-panel-open absolute right-0 mt-2 w-[360px] bg-white border border-zinc-200 rounded-2xl shadow-xl overflow-hidden z-30">
                   <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
                     <div>
                       <p className="text-sm font-bold text-zinc-900">Notifications</p>
@@ -520,6 +530,29 @@ const DashboardPage = () => {
                             {courses.filter(c => !c.status || c.status === 'draft').length}
                           </h3>
                           <span className="text-[10px] font-semibold text-zinc-400 mt-0.5">DRAFTS</span>
+                        </div>
+                      </div>
+
+                      <div className="animate-fade-in-up delay-200 bg-white border border-zinc-200 rounded-xl px-4 py-3 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="txt-label">Trending Category</p>
+                            <h3 className="mt-1 text-base font-bold text-zinc-900 leading-tight">{trendingCategoryName}</h3>
+                            <p className="text-xs text-zinc-500 mt-1">
+                              {trendingCategoryCount} of {courses.length} course{courses.length === 1 ? '' : 's'} ({trendingCategoryShare}%)
+                            </p>
+                          </div>
+                          <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-600 flex items-center justify-center shrink-0">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M3 17h4v4H3v-4zm7-7h4v11h-4V10zm7-7h4v18h-4V3z" />
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="mt-3 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-blue-500 to-cyan-400"
+                            style={{ width: `${trendingCategoryShare}%` }}
+                          />
                         </div>
                       </div>
 

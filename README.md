@@ -9,6 +9,7 @@ Pivot in progress. Marketplace foundations, moderation, and student learning flo
 - Authentication with roles: admin, instructor, student
 - Course CRUD with marketplace fields (title, category, price, status) + moderation
 - Stripe checkout for one-time course purchase + monthly all-access subscription
+- Instructor Stripe Connect onboarding + payout account status in Payments view
 - Student learning: course detail, course player, lesson progress tracking
 - Unified industrial UI across student/instructor/admin dashboards and auth screens
 - Seeded sample course: Data Structures & Algorithms
@@ -110,10 +111,13 @@ Override options for `npm run seed`:
 - `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret
 - `STRIPE_CURRENCY` - Currency code (e.g., `usd`)
 - `SUBSCRIPTION_PRICE_ID` - Stripe Price ID for the monthly all-access plan
+- `STRIPE_CONNECT_COUNTRY` - Stripe Connect country code for instructor accounts (default: `US`)
+- `STRIPE_CONNECT_ONBOARDING_RETURN_URL` - Return URL after Stripe Connect onboarding
+- `STRIPE_CONNECT_ONBOARDING_REFRESH_URL` - Refresh URL when onboarding link expires
 - `FRONTEND_URL` - Frontend URL for CORS
-- `CLOUDINARY_CLOUD_NAME`
-- `CLOUDINARY_API_KEY`
-- `CLOUDINARY_API_SECRET`
+- `CLOUDINARY_CLOUD_NAME` (optional: only needed for server-signed uploads)
+- `CLOUDINARY_API_KEY` (optional: only needed for server-signed uploads)
+- `CLOUDINARY_API_SECRET` (optional: only needed for server-signed uploads)
 - `EMAIL_PROVIDER` - Email provider (`sendgrid`, `log`, or `disabled`)
 - `EMAIL_FROM` - Default sender address (e.g., `no-reply@apollo.local`)
 - `EMAIL_REPLY_TO` - Optional reply-to address
@@ -133,6 +137,18 @@ Override options for `npm run seed`:
 - `VITE_API_URL` - Backend API URL
 - `VITE_STRIPE_PUBLISHABLE_KEY`
 - `VITE_SUBSCRIPTION_MONTHLY_PRICE` - Placeholder monthly price shown in UI
+- `VITE_CLOUDINARY_CLOUD_NAME` - Cloudinary cloud name for direct unsigned uploads
+- `VITE_CLOUDINARY_UPLOAD_PRESET` - Unsigned upload preset name
+- `VITE_CLOUDINARY_DEFAULT_FOLDER` - Optional default folder for uploads
+
+### Cloudinary Uploads (Unsigned)
+The app supports direct frontend uploads to Cloudinary using an unsigned preset.
+
+1. In Cloudinary dashboard, create an unsigned upload preset (example: `apollo_unsigned`).
+2. Set `VITE_CLOUDINARY_CLOUD_NAME` and `VITE_CLOUDINARY_UPLOAD_PRESET` in `frontend/.env`.
+3. Restart the frontend dev server after env changes.
+
+Uploaded files stay stored in Cloudinary and their `secure_url` is saved in Postgres (profile avatar + course thumbnail fields).
 
 ## Legacy Modules (Being Replaced)
 These exist while the pivot is underway and will be refactored or removed:

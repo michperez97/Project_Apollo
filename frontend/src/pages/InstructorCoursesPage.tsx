@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Course } from '../types';
 import * as courseApi from '../services/courses';
 import { uploadFile } from '../services/uploads';
+import { validateImageFile } from '../utils/fileValidation';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert, EmptyState } from '../components/Alerts';
 import SideNav from '../components/SideNav';
@@ -45,6 +46,7 @@ const InstructorCoursesPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const maxThumbnailFileSizeBytes = 8 * 1024 * 1024;
 
   useEffect(() => {
     if (!user) return;
@@ -74,16 +76,24 @@ const InstructorCoursesPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const validationError = validateImageFile(file, maxThumbnailFileSizeBytes, 'Thumbnail');
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setUploadingThumbnail(true);
     setError(null);
     try {
       const url = await uploadFile(file, 'course-thumbnails');
       setCourseForm((prev) => ({ ...prev, thumbnail_url: url }));
       setSuccess('Thumbnail uploaded successfully');
-    } catch {
-      setError('Failed to upload thumbnail.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to upload thumbnail.';
+      setError(message);
     } finally {
       setUploadingThumbnail(false);
+      e.target.value = '';
     }
   };
 

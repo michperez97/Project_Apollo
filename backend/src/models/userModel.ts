@@ -10,6 +10,8 @@ const toSafeUser = (record: UserRecord): SafeUser => ({
   subscription_status: record.subscription_status ?? 'inactive',
   current_period_end: record.current_period_end ?? null,
   stripe_customer_id: record.stripe_customer_id ?? null,
+  stripe_connect_account_id: record.stripe_connect_account_id ?? null,
+  stripe_connect_onboarded_at: record.stripe_connect_onboarded_at ?? null,
   created_at: record.created_at,
   updated_at: record.updated_at
 });
@@ -67,6 +69,41 @@ export const updateUserSubscription = async (
       data.subscription_status,
       data.current_period_end,
       data.stripe_customer_id ?? null,
+      userId
+    ]
+  );
+
+  return result.rows[0] ? toSafeUser(result.rows[0]) : null;
+};
+
+export const updateUserStripeConnect = async (
+  userId: number,
+  data: {
+    stripe_connect_account_id?: string | null;
+    stripe_connect_onboarded_at?: Date | null;
+  }
+): Promise<SafeUser | null> => {
+  const shouldSetAccountId = data.stripe_connect_account_id !== undefined;
+  const shouldSetOnboardedAt = data.stripe_connect_onboarded_at !== undefined;
+
+  const result = await pool.query<UserRecord>(
+    `UPDATE users
+     SET stripe_connect_account_id = CASE
+           WHEN $2 THEN $1
+           ELSE stripe_connect_account_id
+         END,
+         stripe_connect_onboarded_at = CASE
+           WHEN $4 THEN $3
+           ELSE stripe_connect_onboarded_at
+         END,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $5
+     RETURNING *`,
+    [
+      data.stripe_connect_account_id ?? null,
+      shouldSetAccountId,
+      data.stripe_connect_onboarded_at ?? null,
+      shouldSetOnboardedAt,
       userId
     ]
   );
