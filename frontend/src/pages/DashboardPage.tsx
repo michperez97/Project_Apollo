@@ -334,59 +334,59 @@ const DashboardPage = () => {
           ) : (
             <>
               {/* Stat Cards */}
-              <div className={`grid grid-cols-1 ${isInstructorView ? 'grid-cols-3 gap-3 mb-6' : 'md:grid-cols-4 gap-5 mb-8'}`}>
+              <div className={`${isInstructorView ? 'mb-6' : 'grid grid-cols-1 md:grid-cols-4 gap-5 mb-8'}`}>
                 {isInstructorView ? (
-                  <>
-                    {/* My Courses Stat */}
-                    <div className="glass-card p-4 rounded-xl animate-fade-in-up delay-100 group">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-acid/10 rounded-lg text-lime-600 border border-acid/20">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="txt-label group-hover:text-lime-600 transition-colors">My Courses</span>
-                          <h3 className="text-2xl font-bold text-zinc-900 font-mono tracking-tight leading-tight">{courses.length}</h3>
-                        </div>
+                  <div className="inline-grid grid-cols-2 grid-rows-2 bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm divide-x divide-y divide-zinc-200 animate-fade-in-up delay-100">
+                    {/* My Courses */}
+                    <div className="w-36 h-20 flex flex-col items-center justify-center group hover:bg-zinc-50 transition-colors">
+                      <div className="p-1.5 bg-acid/10 rounded-lg text-lime-600 border border-acid/20 mb-1">
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
+                        </svg>
                       </div>
+                      <h3 className="text-lg font-bold text-zinc-900 font-mono tracking-tight leading-none">{courses.length}</h3>
+                      <span className="text-[10px] font-semibold text-zinc-400 mt-0.5">COURSES</span>
                     </div>
 
-                    {/* Published Stat */}
-                    <div className="glass-card p-4 rounded-xl animate-fade-in-up delay-200 group">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-600 border border-emerald-500/20">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="txt-label">Published</span>
-                          <h3 className="text-2xl font-bold text-zinc-900 font-mono tracking-tight leading-tight">
-                            {courses.filter(c => c.status === 'approved').length}
-                          </h3>
-                        </div>
+                    {/* Published */}
+                    <div className="w-36 h-20 flex flex-col items-center justify-center group hover:bg-zinc-50 transition-colors">
+                      <div className="p-1.5 bg-emerald-500/10 rounded-lg text-emerald-600 border border-emerald-500/20 mb-1">
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                        </svg>
                       </div>
+                      <h3 className="text-lg font-bold text-zinc-900 font-mono tracking-tight leading-none">
+                        {courses.filter(c => c.status === 'approved').length}
+                      </h3>
+                      <span className="text-[10px] font-semibold text-zinc-400 mt-0.5">PUBLISHED</span>
                     </div>
 
-                    {/* Pending Review Stat */}
-                    <div className="glass-card p-4 rounded-xl animate-fade-in-up delay-300 group">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-amber-500/10 rounded-lg text-amber-600 border border-amber-500/20">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="txt-label">Pending</span>
-                          <h3 className="text-2xl font-bold text-zinc-900 font-mono tracking-tight leading-tight">
-                            {courses.filter(c => c.status === 'pending').length}
-                          </h3>
-                        </div>
+                    {/* Pending */}
+                    <div className="w-36 h-20 flex flex-col items-center justify-center group hover:bg-zinc-50 transition-colors">
+                      <div className="p-1.5 bg-amber-500/10 rounded-lg text-amber-600 border border-amber-500/20 mb-1">
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" />
+                        </svg>
                       </div>
+                      <h3 className="text-lg font-bold text-zinc-900 font-mono tracking-tight leading-none">
+                        {courses.filter(c => c.status === 'pending').length}
+                      </h3>
+                      <span className="text-[10px] font-semibold text-zinc-400 mt-0.5">PENDING</span>
                     </div>
 
-                  </>
+                    {/* Drafts */}
+                    <div className="w-36 h-20 flex flex-col items-center justify-center group hover:bg-zinc-50 transition-colors">
+                      <div className="p-1.5 bg-zinc-100 rounded-lg text-zinc-500 border border-zinc-200 mb-1">
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-bold text-zinc-900 font-mono tracking-tight leading-none">
+                        {courses.filter(c => !c.status || c.status === 'draft').length}
+                      </h3>
+                      <span className="text-[10px] font-semibold text-zinc-400 mt-0.5">DRAFTS</span>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     {/* Courses Stat */}
@@ -457,8 +457,8 @@ const DashboardPage = () => {
                 {isInstructorView ? (
                   <>
                     {/* Instructor Main Column - Recent Courses */}
-                    <div className="lg:col-span-2 space-y-4 animate-fade-in-up delay-200">
-                      <div className="flex items-center justify-between">
+                    <div className="animate-fade-in-up delay-200 max-w-md">
+                      <div className="flex items-center justify-between mb-3">
                         <h2 className="text-zinc-900 font-bold flex items-center gap-2 text-sm">
                           <svg className="w-4 h-4 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
@@ -468,8 +468,8 @@ const DashboardPage = () => {
                         <span className="txt-label">{courses.length} Total</span>
                       </div>
 
-                      <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                        {courses.slice(0, 5).map((course) => {
+                      <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
+                        {courses.slice(0, 6).map((course) => {
                           const statusColors: Record<string, string> = {
                             approved: 'bg-emerald-100 text-emerald-800',
                             pending: 'bg-amber-100 text-amber-800',
@@ -482,7 +482,7 @@ const DashboardPage = () => {
                             <Link
                               key={course.id}
                               to={`/instructor/courses/${course.id}/builder`}
-                              className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-zinc-200 hover:border-acid/50 shadow-sm hover:shadow-md transition-all group"
+                              className="flex items-center gap-4 bg-white border border-zinc-200 rounded-xl px-4 py-3 hover:border-acid/50 shadow-sm hover:shadow-md transition-all group"
                             >
                               <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0">
                                 <svg className="w-4 h-4 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
@@ -498,12 +498,9 @@ const DashboardPage = () => {
                                     {course.status ?? 'draft'}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-[11px] text-zinc-400 font-medium">{course.category ?? 'General'}</span>
-                                  <span className="text-zinc-300">·</span>
-                                  <span className="text-[11px] text-zinc-400 font-medium">${course.price ?? 0}</span>
-                                </div>
+                                <span className="text-[11px] text-zinc-400 font-medium">{course.category ?? 'General'} · ${course.price ?? 0}</span>
                               </div>
+                              <span className="text-[11px] font-semibold text-zinc-400 group-hover:text-lime-600 transition-colors shrink-0 hidden sm:block">Open in Builder</span>
                               <svg className="w-4 h-4 text-zinc-300 group-hover:text-lime-600 transition-colors shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                               </svg>
@@ -511,11 +508,13 @@ const DashboardPage = () => {
                           );
                         })}
                         {!courses.length && (
-                          <EmptyState
-                            icon="books"
-                            title="No courses yet"
-                            description="Create your first course to get started"
-                          />
+                          <div>
+                            <EmptyState
+                              icon="books"
+                              title="No courses yet"
+                              description="Create your first course to get started"
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
