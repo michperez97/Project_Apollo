@@ -188,6 +188,16 @@ export interface InstructorTransaction {
   created_at: string;
 }
 
+export type InstructorActivityType = 'SALE' | 'JOIN' | 'PROG' | 'RATE';
+
+export interface InstructorActivityEvent {
+  type: InstructorActivityType;
+  student_name: string;
+  course_title: string;
+  timestamp: string;
+  value: string;
+}
+
 export interface Announcement {
   id: number;
   course_id: number;
