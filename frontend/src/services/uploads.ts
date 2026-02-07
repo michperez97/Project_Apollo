@@ -1,12 +1,14 @@
-import { api } from './http';
+const DEFAULT_CLOUD_NAME = 'dmscdsvfq';
+const DEFAULT_UPLOAD_PRESET = 'apollo_unsigned';
 
-type SignResponse = {
-  timestamp: number;
-  signature: string;
-  folder?: string;
-  cloudName?: string;
-  apiKey?: string;
-};
+const CLOUDINARY_CLOUD_NAME =
+  (import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined)?.trim() ||
+  DEFAULT_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET =
+  (import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined)?.trim() ||
+  DEFAULT_UPLOAD_PRESET;
+const CLOUDINARY_DEFAULT_FOLDER =
+  (import.meta.env.VITE_CLOUDINARY_DEFAULT_FOLDER as string | undefined)?.trim() || undefined;
 
 const normalizeFolder = (folder?: string): string | undefined => {
   if (!folder) return undefined;
@@ -14,67 +16,20 @@ const normalizeFolder = (folder?: string): string | undefined => {
   return trimmed.length ? trimmed : undefined;
 };
 
-const extractApiErrorMessage = (error: unknown): string | null => {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'response' in error &&
-    typeof (error as { response?: unknown }).response === 'object'
-  ) {
-    const response = (error as { response?: { data?: unknown } }).response;
-    const data = response?.data;
-    if (typeof data === 'object' && data !== null && 'error' in data) {
-      const message = (data as { error?: unknown }).error;
-      if (typeof message === 'string' && message.trim()) {
-        return message;
-      }
-    }
-  }
-
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-
-  return null;
-};
-
-export const getSignature = async (folder?: string): Promise<SignResponse> => {
-  const normalizedFolder = normalizeFolder(folder);
-  const { data } = await api.get<SignResponse>('/uploads/sign', {
-    params: normalizedFolder ? { folder: normalizedFolder } : undefined
-  });
-  return data;
-};
-
 export const uploadFile = async (file: File, folder?: string): Promise<string> => {
-  const normalizedFolder = normalizeFolder(folder);
-
-  let cloudName: string | undefined;
-  let apiKey: string | undefined;
-  let timestamp: number;
-  let signature: string;
-  try {
-    const signed = await getSignature(normalizedFolder);
-    cloudName = signed.cloudName;
-    apiKey = signed.apiKey;
-    timestamp = signed.timestamp;
-    signature = signed.signature;
-  } catch (error) {
-    throw new Error(extractApiErrorMessage(error) ?? 'Could not start file upload');
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+    throw new Error(
+      'Cloudinary upload is not configured. Set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET.'
+    );
   }
 
-  if (!cloudName || !apiKey) {
-    throw new Error('Cloudinary is not configured');
-  }
-
+  const normalizedFolder = normalizeFolder(folder) ?? CLOUDINARY_DEFAULT_FOLDER;
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('api_key', apiKey);
-  formData.append('timestamp', String(timestamp));
-  formData.append('signature', signature);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
   if (normalizedFolder) formData.append('folder', normalizedFolder);
 
-  const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
+  const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`;
   const response = await fetch(uploadUrl, {
     method: 'POST',
     body: formData
@@ -89,6 +44,10 @@ export const uploadFile = async (file: File, folder?: string): Promise<string> =
       }
     } catch {
       // Best-effort parsing only.
+    }
+
+    if (message.toLowerCase().includes('upload preset')) {
+      message = `Cloudinary preset "${CLOUDINARY_UPLOAD_PRESET}" is not ready for unsigned uploads.`;
     }
     throw new Error(message);
   }
