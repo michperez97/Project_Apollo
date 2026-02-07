@@ -45,6 +45,7 @@ const InstructorCoursesPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const maxThumbnailFileSizeBytes = 8 * 1024 * 1024;
 
   useEffect(() => {
     if (!user) return;
@@ -74,16 +75,28 @@ const InstructorCoursesPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file.');
+      return;
+    }
+
+    if (file.size > maxThumbnailFileSizeBytes) {
+      setError('Thumbnail is too large. Maximum size is 8MB.');
+      return;
+    }
+
     setUploadingThumbnail(true);
     setError(null);
     try {
       const url = await uploadFile(file, 'course-thumbnails');
       setCourseForm((prev) => ({ ...prev, thumbnail_url: url }));
       setSuccess('Thumbnail uploaded successfully');
-    } catch {
-      setError('Failed to upload thumbnail.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to upload thumbnail.';
+      setError(message);
     } finally {
       setUploadingThumbnail(false);
+      e.target.value = '';
     }
   };
 

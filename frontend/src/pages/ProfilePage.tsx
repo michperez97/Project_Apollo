@@ -25,6 +25,7 @@ const ProfilePage = () => {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const maxAvatarFileSizeBytes = 5 * 1024 * 1024;
 
   useEffect(() => {
     const load = async () => {
@@ -51,6 +52,16 @@ const ProfilePage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file.');
+      return;
+    }
+
+    if (file.size > maxAvatarFileSizeBytes) {
+      setError('Image is too large. Maximum size is 5MB.');
+      return;
+    }
+
     setUploading(true);
     setError(null);
     try {
@@ -58,10 +69,14 @@ const ProfilePage = () => {
       setAvatarUrl(url);
       await profileApi.updateMyProfile({ avatar_url: url });
       setSuccess('Avatar updated');
-    } catch {
-      setError('Failed to upload avatar.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to upload avatar.';
+      setError(message);
     } finally {
       setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
