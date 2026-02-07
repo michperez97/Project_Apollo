@@ -3,7 +3,8 @@ import { AuthenticatedRequest } from '../types/auth';
 import { getCourseById } from '../models/courseModel';
 import { listSectionsByCourse, CourseSectionRecord } from '../models/courseSectionModel';
 import { listLessonsByCourse, CourseLessonRecord } from '../models/courseLessonModel';
-import { getEnrollmentByStudentAndCourse } from '../models/enrollmentModel';
+import { recordSubscriptionUsage } from '../models/subscriptionUsageModel';
+import { getStudentCourseAccess } from '../services/courseAccessService';
 
 interface SectionWithLessons extends CourseSectionRecord {
   lessons: CourseLessonRecord[];
@@ -52,9 +53,12 @@ export const getCourseContentHandler = async (
       if (isAdmin || isOwner) {
         hasFullAccess = true;
       } else {
-        const enrollment = await getEnrollmentByStudentAndCourse(req.user.sub, courseId);
-        if (enrollment && enrollment.payment_status === 'paid') {
+        const access = await getStudentCourseAccess(req.user.sub, courseId);
+        if (access.hasAccess) {
           hasFullAccess = true;
+          if (access.source === 'subscription') {
+            await recordSubscriptionUsage(req.user.sub, courseId);
+          }
         }
       }
     }

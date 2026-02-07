@@ -1,10 +1,10 @@
 import pool from '../config/database';
 
 export interface InstructorEarnings {
-  total_revenue: number;
-  total_enrollments: number;
+  total_direct_sales: number;
+  subscriber_enrollments: number;
   active_courses: number;
-  avg_per_course: number;
+  avg_direct_sales_per_course: number;
   currency: string;
 }
 
@@ -12,9 +12,9 @@ export interface CourseRevenue {
   course_id: number;
   title: string;
   price: number;
-  enrollment_count: number;
-  paid_count: number;
-  revenue: number;
+  direct_sales_count: number;
+  direct_sales_revenue: number;
+  subscriber_enrollments: number;
 }
 
 export interface InstructorTransaction {
@@ -29,10 +29,8 @@ export interface InstructorTransaction {
 export const getInstructorEarnings = async (instructorId: number): Promise<InstructorEarnings> => {
   const currency = process.env.STRIPE_CURRENCY || 'usd';
 
-  const revenueResult = await pool.query<{ total: string; enrollment_count: string }>(
-    `SELECT
-       COALESCE(SUM(e.tuition_amount), 0) AS total,
-       COUNT(e.id) AS enrollment_count
+  const directSalesResult = await pool.query<{ total: string }>(
+    `SELECT COALESCE(SUM(e.tuition_amount), 0) AS total
      FROM enrollments e
      JOIN courses c ON c.id = e.course_id
      WHERE c.instructor_id = $1
@@ -40,8 +38,26 @@ export const getInstructorEarnings = async (instructorId: number): Promise<Instr
     [instructorId]
   );
 
-  const totalRevenue = Number(revenueResult.rows[0]?.total ?? 0);
-  const totalEnrollments = Number(revenueResult.rows[0]?.enrollment_count ?? 0);
+  const subscriberUsageResult = await pool.query<{ count: string }>(
+    `SELECT COUNT(*) AS count
+     FROM (
+       SELECT DISTINCT su.course_id, su.student_id
+       FROM course_subscription_usage su
+       JOIN courses c ON c.id = su.course_id
+       WHERE c.instructor_id = $1
+
+       UNION
+
+       SELECT DISTINCT e.course_id, e.student_id
+       FROM enrollments e
+       JOIN courses c ON c.id = e.course_id
+       JOIN users u ON u.id = e.student_id
+       WHERE c.instructor_id = $1
+         AND u.subscription_status = 'active'
+         AND (u.current_period_end IS NULL OR u.current_period_end > CURRENT_TIMESTAMP)
+     ) subscriber_usage`,
+    [instructorId]
+  );
 
   const coursesResult = await pool.query<{ count: string }>(
     `SELECT COUNT(id) AS count
@@ -50,15 +66,17 @@ export const getInstructorEarnings = async (instructorId: number): Promise<Instr
        AND status = 'approved'`,
     [instructorId]
   );
-  const activeCourses = Number(coursesResult.rows[0]?.count ?? 0);
 
-  const avgPerCourse = activeCourses > 0 ? totalRevenue / activeCourses : 0;
+  const totalDirectSales = Number(directSalesResult.rows[0]?.total ?? 0);
+  const subscriberEnrollments = Number(subscriberUsageResult.rows[0]?.count ?? 0);
+  const activeCourses = Number(coursesResult.rows[0]?.count ?? 0);
+  const avgDirectSalesPerCourse = activeCourses > 0 ? totalDirectSales / activeCourses : 0;
 
   return {
-    total_revenue: totalRevenue,
-    total_enrollments: totalEnrollments,
+    total_direct_sales: totalDirectSales,
+    subscriber_enrollments: subscriberEnrollments,
     active_courses: activeCourses,
-    avg_per_course: avgPerCourse,
+    avg_direct_sales_per_course: avgDirectSalesPerCourse,
     currency
   };
 };
@@ -68,22 +86,46 @@ export const getInstructorCourseRevenue = async (instructorId: number): Promise<
     course_id: number;
     title: string;
     price: string;
-    enrollment_count: string;
-    paid_count: string;
-    revenue: string;
+    direct_sales_count: string;
+    direct_sales_revenue: string;
+    subscriber_enrollments: string;
   }>(
     `SELECT
        c.id AS course_id,
        c.title,
        COALESCE(c.price, 0) AS price,
-       COUNT(e.id) AS enrollment_count,
-       COUNT(e.id) FILTER (WHERE e.payment_status = 'paid') AS paid_count,
-       COALESCE(SUM(e.tuition_amount) FILTER (WHERE e.payment_status = 'paid'), 0) AS revenue
+       (
+         SELECT COUNT(*)
+         FROM enrollments e
+         WHERE e.course_id = c.id
+           AND e.payment_status = 'paid'
+       ) AS direct_sales_count,
+       (
+         SELECT COALESCE(SUM(e.tuition_amount), 0)
+         FROM enrollments e
+         WHERE e.course_id = c.id
+           AND e.payment_status = 'paid'
+       ) AS direct_sales_revenue,
+       (
+         SELECT COUNT(*)
+         FROM (
+           SELECT DISTINCT su.student_id
+           FROM course_subscription_usage su
+           WHERE su.course_id = c.id
+
+           UNION
+
+           SELECT DISTINCT e.student_id
+           FROM enrollments e
+           JOIN users u ON u.id = e.student_id
+           WHERE e.course_id = c.id
+             AND u.subscription_status = 'active'
+             AND (u.current_period_end IS NULL OR u.current_period_end > CURRENT_TIMESTAMP)
+         ) subscriber_usage
+       ) AS subscriber_enrollments
      FROM courses c
-     LEFT JOIN enrollments e ON e.course_id = c.id
      WHERE c.instructor_id = $1
-     GROUP BY c.id, c.title, c.price
-     ORDER BY revenue DESC`,
+     ORDER BY direct_sales_revenue DESC, subscriber_enrollments DESC`,
     [instructorId]
   );
 
@@ -91,9 +133,9 @@ export const getInstructorCourseRevenue = async (instructorId: number): Promise<
     course_id: row.course_id,
     title: row.title,
     price: Number(row.price),
-    enrollment_count: Number(row.enrollment_count),
-    paid_count: Number(row.paid_count),
-    revenue: Number(row.revenue)
+    direct_sales_count: Number(row.direct_sales_count),
+    direct_sales_revenue: Number(row.direct_sales_revenue),
+    subscriber_enrollments: Number(row.subscriber_enrollments)
   }));
 };
 
@@ -107,19 +149,17 @@ export const getInstructorTransactions = async (instructorId: number): Promise<I
     created_at: Date;
   }>(
     `SELECT
-       t.id AS transaction_id,
+       e.id AS transaction_id,
        c.title AS course_title,
-       t.student_id,
-       t.amount,
-       t.status,
-       t.created_at
-     FROM transactions t
-     JOIN enrollments e ON e.student_id = t.student_id
+       e.student_id,
+       e.tuition_amount AS amount,
+       e.payment_status AS status,
+       e.enrolled_at AS created_at
+     FROM enrollments e
      JOIN courses c ON c.id = e.course_id
      WHERE c.instructor_id = $1
-       AND t.type = 'payment'
-       AND t.status = 'completed'
-     ORDER BY t.created_at DESC
+       AND e.payment_status = 'paid'
+     ORDER BY e.enrolled_at DESC
      LIMIT 50`,
     [instructorId]
   );

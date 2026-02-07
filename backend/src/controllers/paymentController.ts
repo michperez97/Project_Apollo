@@ -8,11 +8,17 @@ import {
   updateEnrollmentPaymentStatus
 } from '../models/enrollmentModel';
 import { getCourseById } from '../models/courseModel';
-import { findUserById } from '../models/userModel';
+import {
+  findUserById,
+  findUserByStripeCustomerId,
+  updateUserSubscription
+} from '../models/userModel';
 import {
   constructStripeEvent,
+  createCourseCheckoutSession,
   createPaymentIntent,
-  createCheckoutSession
+  createSubscriptionCheckoutSession,
+  getStripeClient
 } from '../services/stripeService';
 import {
   createTransaction,
@@ -20,12 +26,22 @@ import {
   updateTransactionStatusByStripeId
 } from '../models/transactionModel';
 import { notifyEnrollmentCreated, notifyPaymentSucceeded, notifyRefund } from '../services/notificationService';
+import { hasActiveSubscription } from '../services/courseAccessService';
+import { SubscriptionStatus } from '../types/user';
+
+type CheckoutMode = 'payment' | 'subscription';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const CHECKOUT_SUCCESS_URL =
   process.env.STRIPE_CHECKOUT_SUCCESS_URL || `${FRONTEND_URL}/dashboard?checkout=success`;
 const CHECKOUT_CANCEL_URL =
   process.env.STRIPE_CHECKOUT_CANCEL_URL || `${FRONTEND_URL}/dashboard?checkout=cancel`;
+const SUBSCRIPTION_SUCCESS_URL =
+  process.env.STRIPE_SUBSCRIPTION_SUCCESS_URL ||
+  `${FRONTEND_URL}/dashboard?checkout=subscription_success`;
+const SUBSCRIPTION_CANCEL_URL =
+  process.env.STRIPE_SUBSCRIPTION_CANCEL_URL ||
+  `${FRONTEND_URL}/dashboard?checkout=subscription_cancel`;
 
 const toCents = (amount: number): number => Math.round(amount * 100);
 const toDollars = (amountCents: number): number => Math.round(amountCents) / 100;
@@ -39,6 +55,114 @@ const parseMetadataNumber = (
   const value = metadata[key];
   const parsed = value ? Number(value) : NaN;
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const parseCheckoutMode = (rawMode: unknown): CheckoutMode =>
+  rawMode === 'subscription' ? 'subscription' : 'payment';
+
+const mapStripeSubscriptionStatus = (status: Stripe.Subscription.Status): SubscriptionStatus => {
+  if (status === 'active') return 'active';
+  if (status === 'past_due') return 'past_due';
+  if (status === 'canceled') return 'canceled';
+  if (status === 'incomplete') return 'incomplete';
+  if (status === 'trialing') return 'trialing';
+  if (status === 'unpaid') return 'unpaid';
+  return 'inactive';
+};
+
+const toCustomerId = (customer: string | Stripe.Customer | Stripe.DeletedCustomer | null): string | null => {
+  if (!customer) return null;
+  return typeof customer === 'string' ? customer : customer.id;
+};
+
+const upsertSubscriptionStateByCustomer = async (subscription: Stripe.Subscription): Promise<void> => {
+  const customerId = toCustomerId(subscription.customer);
+  if (!customerId) {
+    return;
+  }
+
+  const user = await findUserByStripeCustomerId(customerId);
+  if (!user) {
+    return;
+  }
+
+  const periodEnd = subscription.current_period_end
+    ? new Date(subscription.current_period_end * 1000)
+    : null;
+
+  await updateUserSubscription(user.id, {
+    subscription_status: mapStripeSubscriptionStatus(subscription.status),
+    current_period_end: periodEnd,
+    stripe_customer_id: customerId
+  });
+};
+
+const handleSubscriptionCheckoutCompleted = async (
+  session: Stripe.Checkout.Session
+): Promise<void> => {
+  const customerId = toCustomerId(session.customer);
+  const paymentIntentId =
+    typeof session.payment_intent === 'string'
+      ? session.payment_intent
+      : session.payment_intent?.id ?? null;
+  const amountDollars = toDollars(session.amount_total ?? 0);
+
+  const metadataStudentId = parseMetadataNumber(session.metadata, 'student_id');
+  let targetUserId = metadataStudentId;
+
+  if (targetUserId === null && customerId) {
+    const existingUser = await findUserByStripeCustomerId(customerId);
+    targetUserId = existingUser?.id ?? null;
+  }
+
+  if (targetUserId === null) {
+    console.error('Missing student metadata for subscription checkout session:', session.id);
+    return;
+  }
+
+  const stripe = getStripeClient();
+  const sessionSubscription = session.subscription;
+  if (typeof sessionSubscription === 'string') {
+    const subscription = await stripe.subscriptions.retrieve(sessionSubscription);
+    const periodEnd = subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000)
+      : null;
+
+    await updateUserSubscription(targetUserId, {
+      subscription_status: mapStripeSubscriptionStatus(subscription.status),
+      current_period_end: periodEnd,
+      stripe_customer_id: customerId
+    });
+  } else {
+    await updateUserSubscription(targetUserId, {
+      subscription_status: 'active',
+      current_period_end: null,
+      stripe_customer_id: customerId
+    });
+  }
+
+  if (paymentIntentId) {
+    const existingTransaction = await findTransactionByStripePaymentId(paymentIntentId);
+    if (!existingTransaction) {
+      await createTransaction({
+        student_id: targetUserId,
+        amount: amountDollars,
+        type: 'payment',
+        stripe_payment_id: paymentIntentId,
+        status: 'completed',
+        description: 'All-access subscription activated'
+      });
+    }
+  } else if (amountDollars > 0) {
+    await createTransaction({
+      student_id: targetUserId,
+      amount: amountDollars,
+      type: 'payment',
+      stripe_payment_id: null,
+      status: 'completed',
+      description: 'All-access subscription activated'
+    });
+  }
 };
 
 export const createPaymentIntentHandler = async (
@@ -125,18 +249,50 @@ export const createCheckoutSessionHandler = async (
       return res.status(403).json({ error: 'Only students or admins can create checkouts' });
     }
 
-    const courseId = Number(req.body.courseId);
-    if (!courseId || !Number.isFinite(courseId)) {
-      return res.status(400).json({ error: 'courseId is required' });
-    }
-
+    const checkoutMode = parseCheckoutMode(req.body.mode);
+    const hasExplicitStudentTarget = user.role === 'admin' && req.body.student_id !== undefined;
     const studentId =
       user.role === 'admin' && req.body.student_id
         ? Number(req.body.student_id)
         : user.sub;
 
-    if (!Number.isFinite(studentId)) {
+    if (!Number.isFinite(studentId) || studentId <= 0) {
       return res.status(400).json({ error: 'Invalid student_id' });
+    }
+
+    const targetStudent = await findUserById(studentId);
+    if (!targetStudent) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+    if ((user.role === 'student' || hasExplicitStudentTarget) && targetStudent.role !== 'student') {
+      return res.status(400).json({ error: 'Target user must have student role' });
+    }
+
+    if (checkoutMode === 'subscription') {
+      if (hasActiveSubscription(targetStudent)) {
+        return res.status(409).json({ error: 'Subscription is already active' });
+      }
+
+      const session = await createSubscriptionCheckoutSession({
+        studentId,
+        customerId: targetStudent.stripe_customer_id,
+        customerEmail: targetStudent.email,
+        successUrl: SUBSCRIPTION_SUCCESS_URL,
+        cancelUrl: SUBSCRIPTION_CANCEL_URL
+      });
+
+      return res.status(201).json({
+        checkoutType: 'subscription',
+        checkout: {
+          id: session.id,
+          url: session.url
+        }
+      });
+    }
+
+    const courseId = Number(req.body.courseId);
+    if (!courseId || !Number.isFinite(courseId)) {
+      return res.status(400).json({ error: 'courseId is required for payment checkout' });
     }
 
     const course = await getCourseById(courseId);
@@ -163,34 +319,22 @@ export const createCheckoutSessionHandler = async (
         payment_status: 'paid'
       });
       await notifyEnrollmentCreated(enrollment);
-      return res.status(201).json({ enrollment, checkout: null });
+      return res.status(201).json({ checkoutType: 'payment', enrollment, checkout: null });
     }
 
     const amountCents = toCents(price);
-
-    let customerEmail: string | undefined = user.email;
-    if (user.role === 'admin' && studentId !== user.sub) {
-      const student = await findUserById(studentId);
-      if (!student) {
-        return res.status(400).json({ error: 'Invalid student_id: user not found' });
-      }
-      if (student.role !== 'student') {
-        return res.status(400).json({ error: 'Invalid student_id: user is not a student' });
-      }
-      customerEmail = student.email;
-    }
-
-    const session = await createCheckoutSession({
+    const session = await createCourseCheckoutSession({
       amountCents,
       courseId,
       courseTitle: course.title || 'Course',
       studentId,
-      customerEmail: customerEmail || '',
+      customerEmail: targetStudent.email,
       successUrl: CHECKOUT_SUCCESS_URL,
       cancelUrl: CHECKOUT_CANCEL_URL
     });
 
     return res.status(201).json({
+      checkoutType: 'payment',
       checkout: {
         id: session.id,
         url: session.url
@@ -208,6 +352,12 @@ export const paymentWebhookHandler = async (req: Request, res: Response) => {
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
+
+      if (session.mode === 'subscription') {
+        await handleSubscriptionCheckoutCompleted(session);
+        return res.json({ received: true });
+      }
+
       const courseId = parseMetadataNumber(session.metadata, 'course_id');
       const studentId = parseMetadataNumber(session.metadata, 'student_id');
       const paymentIntentId =
@@ -270,6 +420,12 @@ export const paymentWebhookHandler = async (req: Request, res: Response) => {
       }
 
       return res.json({ received: true, transactionCreated });
+    }
+
+    if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+      const subscription = event.data.object as Stripe.Subscription;
+      await upsertSubscriptionStateByCustomer(subscription);
+      return res.json({ received: true });
     }
 
     if (event.type === 'payment_intent.succeeded') {

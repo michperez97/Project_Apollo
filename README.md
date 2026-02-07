@@ -8,7 +8,7 @@ Pivot in progress. Marketplace foundations, moderation, and student learning flo
 - Public landing page and catalog (approved courses only)
 - Authentication with roles: admin, instructor, student
 - Course CRUD with marketplace fields (title, category, price, status) + moderation
-- Stripe checkout for course purchase + enrollment creation
+- Stripe checkout for one-time course purchase + monthly all-access subscription
 - Student learning: course detail, course player, lesson progress tracking
 - Unified industrial UI across student/instructor/admin dashboards and auth screens
 - Seeded sample course: Data Structures & Algorithms
@@ -81,9 +81,9 @@ npm run dev
 5. Access the app:
 - Landing page: http://localhost:5173/
 - Dashboard (auth required): http://localhost:5173/dashboard
-- Backend API: http://localhost:5000/health (override with `PORT` in `backend/.env`)
+- Backend API: http://localhost:5001/health (override with `PORT` in `backend/.env`)
 
-Note: if port 5000 is in use, set `PORT` in `backend/.env` and update `VITE_API_URL` in `frontend/.env`.
+Note: if port 5001 is in use, set `PORT` in `backend/.env` and update `VITE_API_URL` in `frontend/.env`.
 
 ## Seeded Accounts
 Defaults (override via env if needed):
@@ -109,6 +109,7 @@ Override options for `npm run seed`:
 - `STRIPE_SECRET_KEY` - Stripe secret key
 - `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret
 - `STRIPE_CURRENCY` - Currency code (e.g., `usd`)
+- `SUBSCRIPTION_PRICE_ID` - Stripe Price ID for the monthly all-access plan
 - `FRONTEND_URL` - Frontend URL for CORS
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_API_KEY`
@@ -131,6 +132,7 @@ Override options for `npm run seed`:
 ### Frontend (.env)
 - `VITE_API_URL` - Backend API URL
 - `VITE_STRIPE_PUBLISHABLE_KEY`
+- `VITE_SUBSCRIPTION_MONTHLY_PRICE` - Placeholder monthly price shown in UI
 
 ## Legacy Modules (Being Replaced)
 These exist while the pivot is underway and will be refactored or removed:

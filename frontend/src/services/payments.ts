@@ -2,6 +2,7 @@ import { api } from './http';
 import { Enrollment, PaymentIntentSession, StudentBalance, Transaction, FinancialSummary, StudentBalanceDetail, InstructorEarningsSummary, CourseRevenueBreakdown, InstructorTransaction } from '../types';
 
 export interface CheckoutSessionResponse {
+  checkoutType?: 'payment' | 'subscription';
   checkout?: { id: string; url: string };
   enrollment?: Enrollment;
 }
@@ -16,14 +17,21 @@ export const createPaymentIntent = async (
 };
 
 export const createCheckoutSession = async (
-  courseId: number,
-  studentId?: number
+  payload: { mode: 'payment'; courseId: number; studentId?: number } | { mode: 'subscription'; studentId?: number }
 ): Promise<CheckoutSessionResponse> => {
-  const payload: { courseId: number; student_id?: number } = { courseId };
-  if (studentId) {
-    payload.student_id = studentId;
+  const body: { mode: 'payment' | 'subscription'; courseId?: number; student_id?: number } = {
+    mode: payload.mode
+  };
+
+  if (payload.mode === 'payment') {
+    body.courseId = payload.courseId;
   }
-  const { data } = await api.post<CheckoutSessionResponse>('/payments/checkout', payload);
+
+  if (payload.studentId) {
+    body.student_id = payload.studentId;
+  }
+
+  const { data } = await api.post<CheckoutSessionResponse>('/payments/checkout', body);
   return data;
 };
 

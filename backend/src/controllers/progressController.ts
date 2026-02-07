@@ -1,7 +1,8 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../types/auth';
 import { getLessonById } from '../models/courseLessonModel';
-import { getEnrollmentByStudentAndCourse } from '../models/enrollmentModel';
+import { recordSubscriptionUsage } from '../models/subscriptionUsageModel';
+import { getStudentCourseAccess } from '../services/courseAccessService';
 import {
   listProgressByStudentAndCourse,
   upsertProgress,
@@ -23,9 +24,13 @@ export const getCourseProgressHandler = async (
       return res.status(400).json({ error: 'Invalid course id' });
     }
 
-    const enrollment = await getEnrollmentByStudentAndCourse(req.user.sub, courseId);
-    if (!enrollment || enrollment.payment_status !== 'paid') {
-      return res.status(403).json({ error: 'Not enrolled in this course' });
+    const access = await getStudentCourseAccess(req.user.sub, courseId);
+    if (!access.hasAccess) {
+      return res.status(403).json({ error: 'No active access for this course' });
+    }
+
+    if (access.source === 'subscription') {
+      await recordSubscriptionUsage(req.user.sub, courseId);
     }
 
     const progress = await listProgressByStudentAndCourse(req.user.sub, courseId);
@@ -55,9 +60,13 @@ export const updateLessonProgressHandler = async (
       return res.status(404).json({ error: 'Lesson not found' });
     }
 
-    const enrollment = await getEnrollmentByStudentAndCourse(req.user.sub, lesson.course_id);
-    if (!enrollment || enrollment.payment_status !== 'paid') {
-      return res.status(403).json({ error: 'Not enrolled in this course' });
+    const access = await getStudentCourseAccess(req.user.sub, lesson.course_id);
+    if (!access.hasAccess) {
+      return res.status(403).json({ error: 'No active access for this course' });
+    }
+
+    if (access.source === 'subscription') {
+      await recordSubscriptionUsage(req.user.sub, lesson.course_id);
     }
 
     const { status, last_position_seconds } = req.body;

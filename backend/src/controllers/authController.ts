@@ -2,15 +2,47 @@ import { Response, NextFunction } from 'express';
 import { registerUser, loginUser } from '../services/authService';
 import { AuthenticatedRequest } from '../types/auth';
 import { findUserById, toPublicUser } from '../models/userModel';
+import { UserRole } from '../types/user';
+
+const readRequiredString = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+};
+
+const parseRole = (value: unknown): UserRole | null => {
+  const raw = readRequiredString(value);
+  if (!raw) {
+    return null;
+  }
+
+  const normalized = raw.toLowerCase();
+  return normalized === 'admin' || normalized === 'instructor' || normalized === 'student'
+    ? normalized
+    : null;
+};
 
 export const register = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const { email, password, first_name, last_name, role } = req.body;
-    if (!email || !password || !first_name || !last_name || !role) {
+    const email = readRequiredString(req.body.email);
+    const password = readRequiredString(req.body.password);
+    const firstName = readRequiredString(req.body.first_name);
+    const lastName = readRequiredString(req.body.last_name);
+    const role = parseRole(req.body.role);
+
+    if (!email || !password || !firstName || !lastName || !role) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const result = await registerUser({ email, password, first_name, last_name, role });
+    const result = await registerUser({
+      email,
+      password,
+      first_name: firstName,
+      last_name: lastName,
+      role
+    });
     return res.status(201).json(result);
   } catch (error) {
     if (error instanceof Error && error.message.includes('already in use')) {
@@ -22,7 +54,9 @@ export const register = async (req: AuthenticatedRequest, res: Response, next: N
 
 export const login = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const { email, password } = req.body;
+    const email = readRequiredString(req.body.email);
+    const password = readRequiredString(req.body.password);
+
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
@@ -53,5 +87,3 @@ export const me = async (req: AuthenticatedRequest, res: Response, next: NextFun
     return next(error);
   }
 };
-
-

@@ -2,7 +2,10 @@ import pool from '../config/database';
 
 async function seedContent() {
   // Get course ID
-  const courseRes = await pool.query('SELECT id FROM courses WHERE code = $1', ['DATA-STRUCT-101']);
+  const courseRes = await pool.query(
+    'SELECT id FROM courses WHERE title = $1 ORDER BY id DESC LIMIT 1',
+    ['Data Structures & Algorithms']
+  );
   const courseId = courseRes.rows[0]?.id;
   if (!courseId) {
     console.log('Course not found');

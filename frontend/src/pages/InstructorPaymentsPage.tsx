@@ -9,58 +9,90 @@ import SideNav from '../components/SideNav';
 
 /* ── Pure-SVG mini charts (no library needed) ── */
 
-const Sparkline = ({ data, color, fillColor }: { data: number[]; color: string; fillColor: string }) => {
-  if (data.length < 2) return null;
-  const w = 120, h = 36, pad = 2;
-  const max = Math.max(...data) || 1;
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const pts = data.map((v, i) => ({
-    x: pad + (i / (data.length - 1)) * (w - pad * 2),
-    y: pad + (1 - (v - min) / range) * (h - pad * 2),
-  }));
-  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
-  const area = `${line} L${pts[pts.length - 1].x},${h} L${pts[0].x},${h} Z`;
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-9 mt-2" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id={`grad-${color}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={fillColor} stopOpacity={0.3} />
-          <stop offset="100%" stopColor={fillColor} stopOpacity={0} />
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#grad-${color})`} />
-      <path d={line} fill="none" stroke={fillColor} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r={2.5} fill={fillColor} />
-    </svg>
-  );
+const normalizeSeries = (values: number[], fallback: number): number[] => {
+  if (!values.length) {
+    return [fallback, fallback * 1.01 + 0.01];
+  }
+  if (values.length === 1) {
+    const point = values[0];
+    return [point * 0.98, point];
+  }
+  return values;
 };
 
-const MiniBarChart = ({ data, color }: { data: number[]; color: string }) => {
-  if (!data.length) return null;
-  const w = 120, h = 36, pad = 2;
-  const max = Math.max(...data) || 1;
-  const barCount = Math.min(data.length, 8);
-  const bars = data.slice(0, barCount);
-  const gap = 3;
-  const barW = Math.max(4, (w - pad * 2 - gap * (barCount - 1)) / barCount);
+const buildSmoothPath = (points: Array<{ x: number; y: number }>): string => {
+  if (points.length < 2) {
+    return '';
+  }
+
+  let path = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length; i += 1) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const controlX = (prev.x + curr.x) / 2;
+    path += ` Q ${controlX} ${prev.y} ${curr.x} ${curr.y}`;
+  }
+  return path;
+};
+
+const RobinhoodChart = ({
+  data,
+  tone
+}: {
+  data: number[];
+  tone: 'emerald' | 'blue' | 'lime' | 'violet';
+}) => {
+  const series = normalizeSeries(data, 0);
+  const w = 140;
+  const h = 44;
+  const pad = 3;
+  const max = Math.max(...series);
+  const min = Math.min(...series);
+  const range = max - min || 1;
+  const first = series[0];
+  const last = series[series.length - 1];
+
+  const toneColorMap: Record<typeof tone, string> = {
+    emerald: '#10b981',
+    blue: '#2563eb',
+    lime: '#84cc16',
+    violet: '#8b5cf6'
+  };
+  const fallColor = '#ef4444';
+  const isUp = last >= first;
+  const strokeColor = isUp ? toneColorMap[tone] : fallColor;
+  const gradientId = `rh-grad-${tone}-${isUp ? 'up' : 'down'}`;
+
+  const points = series.map((value, index) => ({
+    x: pad + (index / (series.length - 1)) * (w - pad * 2),
+    y: pad + (1 - (value - min) / range) * (h - pad * 2)
+  }));
+
+  const linePath = buildSmoothPath(points);
+  const areaPath = `${linePath} L ${points[points.length - 1].x} ${h - 1} L ${points[0].x} ${h - 1} Z`;
+  const baselineY = points[0].y;
+
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-9 mt-2" preserveAspectRatio="none">
-      {bars.map((v, i) => {
-        const barH = Math.max(2, (v / max) * (h - pad * 2));
-        return (
-          <rect
-            key={i}
-            x={pad + i * (barW + gap)}
-            y={h - pad - barH}
-            width={barW}
-            height={barH}
-            rx={2}
-            fill={color}
-            opacity={0.15 + (i / barCount) * 0.65}
-          />
-        );
-      })}
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-11 mt-2" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={strokeColor} stopOpacity={0.34} />
+          <stop offset="100%" stopColor={strokeColor} stopOpacity={0.01} />
+        </linearGradient>
+      </defs>
+      <line
+        x1={pad}
+        x2={w - pad}
+        y1={baselineY}
+        y2={baselineY}
+        stroke={strokeColor}
+        strokeWidth={0.8}
+        strokeDasharray="2 2"
+        opacity={0.18}
+      />
+      <path d={areaPath} fill={`url(#${gradientId})`} />
+      <path d={linePath} fill="none" stroke={strokeColor} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r={2.7} fill={strokeColor} />
     </svg>
   );
 };
@@ -84,15 +116,25 @@ const InstructorPaymentsPage = () => {
     return sorted.map((t) => { cum += t.amount; return cum; });
   }, [transactions]);
 
-  const enrollmentBars = useMemo(
-    () => courses.map((c) => c.enrollment_count),
+  const subscriberSeries = useMemo(
+    () => courses.map((c) => c.subscriber_enrollments),
     [courses]
   );
 
-  const courseRevenueBars = useMemo(
-    () => courses.map((c) => c.revenue),
-    [courses]
-  );
+  const activeCourseSeries = useMemo(() => {
+    if (!earnings) return [];
+    const steps = Math.max(courses.length, 2);
+    return Array.from({ length: steps }, (_, idx) => Math.min(earnings.active_courses, idx + 1));
+  }, [courses.length, earnings]);
+
+  const avgDirectSalesSeries = useMemo(() => {
+    if (!courses.length) return [];
+    let runningTotal = 0;
+    return courses.map((course, idx) => {
+      runningTotal += course.direct_sales_revenue;
+      return runningTotal / (idx + 1);
+    });
+  }, [courses]);
 
   useEffect(() => {
     if (!user || (user.role !== 'instructor' && user.role !== 'admin')) {
@@ -170,13 +212,13 @@ const InstructorPaymentsPage = () => {
                           <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" />
                         </svg>
                       </div>
-                      <span className="txt-label">Total Revenue</span>
+                      <span className="txt-label">Total Direct Sales</span>
                     </div>
                     <h3 className="text-3xl font-bold text-emerald-600 mb-0 font-mono tracking-tight">
-                      ${earnings.total_revenue.toFixed(0)}
+                      ${earnings.total_direct_sales.toFixed(0)}
                     </h3>
                     <p className="text-xs text-zinc-500 font-medium">{earnings.currency.toUpperCase()}</p>
-                    <Sparkline data={revenueSparkline} color="emerald" fillColor="#10b981" />
+                    <RobinhoodChart data={revenueSparkline} tone="emerald" />
                   </div>
 
                   <div className="stat-card animate-fade-in-up delay-200 group overflow-hidden">
@@ -186,13 +228,13 @@ const InstructorPaymentsPage = () => {
                           <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
                         </svg>
                       </div>
-                      <span className="txt-label">Enrollments</span>
+                      <span className="txt-label">Subscriber Enrollments</span>
                     </div>
                     <h3 className="text-3xl font-bold text-blue-600 mb-0 font-mono tracking-tight">
-                      {earnings.total_enrollments}
+                      {earnings.subscriber_enrollments}
                     </h3>
-                    <p className="text-xs text-zinc-500 font-medium">paid students</p>
-                    <MiniBarChart data={enrollmentBars} color="#3b82f6" />
+                    <p className="text-xs text-zinc-500 font-medium">subscription usage volume</p>
+                    <RobinhoodChart data={subscriberSeries} tone="blue" />
                   </div>
 
                   <div className="stat-card animate-fade-in-up delay-300 group overflow-hidden">
@@ -208,7 +250,7 @@ const InstructorPaymentsPage = () => {
                       {earnings.active_courses}
                     </h3>
                     <p className="text-xs text-zinc-500 font-medium">approved</p>
-                    <MiniBarChart data={courseRevenueBars} color="#84cc16" />
+                    <RobinhoodChart data={activeCourseSeries} tone="lime" />
                   </div>
 
                   <div className="stat-card animate-fade-in-up delay-400 group overflow-hidden">
@@ -221,10 +263,10 @@ const InstructorPaymentsPage = () => {
                       <span className="txt-label">Avg / Course</span>
                     </div>
                     <h3 className="text-3xl font-bold text-violet-600 mb-0 font-mono tracking-tight">
-                      ${earnings.avg_per_course.toFixed(0)}
+                      ${earnings.avg_direct_sales_per_course.toFixed(0)}
                     </h3>
                     <p className="text-xs text-zinc-500 font-medium">{earnings.currency.toUpperCase()}</p>
-                    <Sparkline data={courseRevenueBars} color="violet" fillColor="#8b5cf6" />
+                    <RobinhoodChart data={avgDirectSalesSeries} tone="violet" />
                   </div>
                 </div>
               )}
@@ -269,9 +311,9 @@ const InstructorPaymentsPage = () => {
                       <tr>
                         <th className="text-left px-4 py-3 txt-label">Course</th>
                         <th className="text-right px-4 py-3 txt-label">Price</th>
-                        <th className="text-right px-4 py-3 txt-label">Enrollments</th>
-                        <th className="text-right px-4 py-3 txt-label hidden md:table-cell">Paid</th>
-                        <th className="text-right px-4 py-3 txt-label">Revenue</th>
+                        <th className="text-right px-4 py-3 txt-label">Direct Sales</th>
+                        <th className="text-right px-4 py-3 txt-label hidden md:table-cell">Subscriber Enrollments</th>
+                        <th className="text-right px-4 py-3 txt-label">Direct Sales Revenue</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -281,10 +323,10 @@ const InstructorPaymentsPage = () => {
                             <span className="font-medium text-zinc-900">{course.title}</span>
                           </td>
                           <td className="px-4 py-3 text-right font-mono">${course.price.toFixed(0)}</td>
-                          <td className="px-4 py-3 text-right font-mono">{course.enrollment_count}</td>
-                          <td className="px-4 py-3 text-right font-mono hidden md:table-cell">{course.paid_count}</td>
+                          <td className="px-4 py-3 text-right font-mono">{course.direct_sales_count}</td>
+                          <td className="px-4 py-3 text-right font-mono hidden md:table-cell">{course.subscriber_enrollments}</td>
                           <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-600">
-                            ${course.revenue.toFixed(0)}
+                            ${course.direct_sales_revenue.toFixed(0)}
                           </td>
                         </tr>
                       ))}

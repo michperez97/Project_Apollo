@@ -9,11 +9,44 @@ import { paymentWebhookHandler } from './controllers/paymentController';
 dotenv.config();
 
 const app: Application = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
+
+const configuredOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+const normalizeOriginVariant = (origin: string) => {
+  if (origin.includes('127.0.0.1')) {
+    return origin.replace('127.0.0.1', 'localhost');
+  }
+  if (origin.includes('localhost')) {
+    return origin.replace('localhost', '127.0.0.1');
+  }
+  return null;
+};
+
+const allowedOrigins = new Set<string>(configuredOrigins);
+for (const origin of configuredOrigins) {
+  const variant = normalizeOriginVariant(origin);
+  if (variant) {
+    allowedOrigins.add(variant);
+  }
+}
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.has(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`Origin not allowed by CORS: ${origin}`));
+  },
   credentials: true
 }));
 app.use(cookieParser());
