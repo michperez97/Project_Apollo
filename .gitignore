@@ -35,6 +35,7 @@ Thumbs.db
 
 # File uploads (development)
 backend/uploads/
+backend/storage/
 *.tmp
 
 # Database

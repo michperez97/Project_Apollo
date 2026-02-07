@@ -1,6 +1,6 @@
 import pool from '../config/database';
 
-export type LessonType = 'video' | 'text' | 'quiz';
+export type LessonType = 'video' | 'text' | 'quiz' | 'scorm';
 
 export interface CourseLessonRecord {
   id: number;

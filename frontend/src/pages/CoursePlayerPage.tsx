@@ -10,6 +10,7 @@ import {
   LessonProgress
 } from '../services/content';
 import { getQuizzesByCourse, Quiz } from '../services/quizzes';
+import { startScormAttempt } from '../services/scorm';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert } from '../components/Alerts';
 
@@ -23,6 +24,9 @@ const CoursePlayerPage = () => {
   const [currentLesson, setCurrentLesson] = useState<CourseLesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [scormLaunchUrls, setScormLaunchUrls] = useState<Record<number, string>>({});
+  const [loadingScormLessonId, setLoadingScormLessonId] = useState<number | null>(null);
+  const [scormError, setScormError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastUpdateRef = useRef<number>(0);
 
@@ -73,8 +77,23 @@ const CoursePlayerPage = () => {
   }, [courseId, user, navigate]);
 
   const handleLessonSelect = (lesson: CourseLesson) => {
+    if (lesson.lesson_type === 'scorm') {
+      setScormError(null);
+    }
     setCurrentLesson(lesson);
   };
+
+  const upsertProgressState = useCallback((updated: LessonProgress) => {
+    setProgress((prev) => {
+      const existing = prev.findIndex((p) => p.lesson_id === updated.lesson_id);
+      if (existing >= 0) {
+        const copy = [...prev];
+        copy[existing] = updated;
+        return copy;
+      }
+      return [...prev, updated];
+    });
+  }, []);
 
   const handleVideoTimeUpdate = useCallback(async () => {
     if (!videoRef.current || !currentLesson) return;
@@ -98,15 +117,7 @@ const CoursePlayerPage = () => {
     if (!currentLesson) return;
     try {
       const updated = await updateLessonProgress(currentLesson.id, { status: 'completed' });
-      setProgress((prev) => {
-        const existing = prev.findIndex((p) => p.lesson_id === currentLesson.id);
-        if (existing >= 0) {
-          const copy = [...prev];
-          copy[existing] = updated;
-          return copy;
-        }
-        return [...prev, updated];
-      });
+      upsertProgressState(updated);
     } catch (err) {
       console.error('Failed to mark as completed:', err);
     }
@@ -116,19 +127,54 @@ const CoursePlayerPage = () => {
     if (!currentLesson) return;
     try {
       const updated = await updateLessonProgress(currentLesson.id, { status: 'completed' });
-      setProgress((prev) => {
-        const existing = prev.findIndex((p) => p.lesson_id === currentLesson.id);
-        if (existing >= 0) {
-          const copy = [...prev];
-          copy[existing] = updated;
-          return copy;
-        }
-        return [...prev, updated];
-      });
+      upsertProgressState(updated);
     } catch (err) {
       console.error('Failed to mark as completed:', err);
     }
   };
+
+  useEffect(() => {
+    if (!currentLesson || currentLesson.lesson_type !== 'scorm') {
+      return;
+    }
+    if (scormLaunchUrls[currentLesson.id]) {
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingScormLessonId(currentLesson.id);
+    setScormError(null);
+
+    startScormAttempt(currentLesson.id)
+      .then(async (attempt) => {
+        if (cancelled) return;
+        setScormLaunchUrls((prev) => ({
+          ...prev,
+          [currentLesson.id]: attempt.launchUrl
+        }));
+        if (attempt.status === 'completed' || attempt.status === 'passed') {
+          const updated = await updateLessonProgress(currentLesson.id, { status: 'completed' });
+          if (!cancelled) {
+            upsertProgressState(updated);
+          }
+        }
+      })
+      .catch((err: unknown) => {
+        console.error('Failed to start SCORM attempt:', err);
+        if (!cancelled) {
+          setScormError('Failed to launch SCORM content.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingScormLessonId(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentLesson, scormLaunchUrls, upsertProgressState]);
 
   useEffect(() => {
     if (currentLesson && videoRef.current) {
@@ -262,6 +308,37 @@ const CoursePlayerPage = () => {
           <Link to={`/quiz/${linkedQuiz.id}`} className="btn-primary">
             Take Quiz
           </Link>
+        </div>
+      );
+    }
+
+    if (currentLesson.lesson_type === 'scorm') {
+      const launchUrl = scormLaunchUrls[currentLesson.id];
+      const isLoading = loadingScormLessonId === currentLesson.id;
+
+      return (
+        <div className="space-y-3">
+          {scormError && (
+            <Alert type="error" message={scormError} />
+          )}
+          {isLoading && (
+            <div className="panel-technical p-6">
+              <p className="text-zinc-600">Initializing SCORM runtime...</p>
+            </div>
+          )}
+          {launchUrl && (
+            <iframe
+              src={launchUrl}
+              title={currentLesson.title}
+              className="w-full h-[70vh] rounded-xl border border-zinc-200 bg-white"
+              allow="fullscreen"
+            />
+          )}
+          {!launchUrl && !isLoading && !scormError && (
+            <div className="panel-technical p-6">
+              <p className="text-zinc-600">SCORM launch URL is not available.</p>
+            </div>
+          )}
         </div>
       );
     }
