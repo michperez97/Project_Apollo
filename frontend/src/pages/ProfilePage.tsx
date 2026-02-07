@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { InstructorProfile } from '../types';
 import * as profileApi from '../services/profiles';
 import { uploadFile } from '../services/uploads';
+import { validateImageFile } from '../utils/fileValidation';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert } from '../components/Alerts';
 import SideNav from '../components/SideNav';
@@ -52,13 +53,9 @@ const ProfilePage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setError('Please choose an image file.');
-      return;
-    }
-
-    if (file.size > maxAvatarFileSizeBytes) {
-      setError('Image is too large. Maximum size is 5MB.');
+    const validationError = validateImageFile(file, maxAvatarFileSizeBytes);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 

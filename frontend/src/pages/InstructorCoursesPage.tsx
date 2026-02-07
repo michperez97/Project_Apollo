@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Course } from '../types';
 import * as courseApi from '../services/courses';
 import { uploadFile } from '../services/uploads';
+import { validateImageFile } from '../utils/fileValidation';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert, EmptyState } from '../components/Alerts';
 import SideNav from '../components/SideNav';
@@ -75,13 +76,9 @@ const InstructorCoursesPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setError('Please choose an image file.');
-      return;
-    }
-
-    if (file.size > maxThumbnailFileSizeBytes) {
-      setError('Thumbnail is too large. Maximum size is 8MB.');
+    const validationError = validateImageFile(file, maxThumbnailFileSizeBytes, 'Thumbnail');
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
