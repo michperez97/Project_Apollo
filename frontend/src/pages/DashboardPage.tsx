@@ -312,12 +312,14 @@ const DashboardPage = () => {
               </svg>
             </button>
 
-            <Link
-              to={isInstructorView ? '/instructor/courses' : '/'}
-              className="hidden md:flex items-center h-11 bg-white border border-zinc-200 rounded-2xl px-4 shadow-md hover:shadow-lg transition-all text-sm text-zinc-600 hover:text-zinc-900"
-            >
-              {isInstructorView ? 'My Courses' : 'Browse Courses'}
-            </Link>
+            {!isInstructorView && (
+              <Link
+                to="/"
+                className="hidden md:flex items-center h-11 bg-white border border-zinc-200 rounded-2xl px-4 shadow-md hover:shadow-lg transition-all text-sm text-zinc-600 hover:text-zinc-900"
+              >
+                Browse Courses
+              </Link>
+            )}
           </div>
         </header>
 
