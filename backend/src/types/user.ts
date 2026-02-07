@@ -18,6 +18,8 @@ export interface UserRecord {
   subscription_status: SubscriptionStatus;
   current_period_end: Date | null;
   stripe_customer_id: string | null;
+  stripe_connect_account_id: string | null;
+  stripe_connect_onboarded_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -31,6 +33,8 @@ export interface SafeUser {
   subscription_status: SubscriptionStatus;
   current_period_end: Date | null;
   stripe_customer_id: string | null;
+  stripe_connect_account_id: string | null;
+  stripe_connect_onboarded_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }

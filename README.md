@@ -9,6 +9,7 @@ Pivot in progress. Marketplace foundations, moderation, and student learning flo
 - Authentication with roles: admin, instructor, student
 - Course CRUD with marketplace fields (title, category, price, status) + moderation
 - Stripe checkout for one-time course purchase + monthly all-access subscription
+- Instructor Stripe Connect onboarding + payout account status in Payments view
 - Student learning: course detail, course player, lesson progress tracking
 - Unified industrial UI across student/instructor/admin dashboards and auth screens
 - Seeded sample course: Data Structures & Algorithms
@@ -110,6 +111,9 @@ Override options for `npm run seed`:
 - `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret
 - `STRIPE_CURRENCY` - Currency code (e.g., `usd`)
 - `SUBSCRIPTION_PRICE_ID` - Stripe Price ID for the monthly all-access plan
+- `STRIPE_CONNECT_COUNTRY` - Stripe Connect country code for instructor accounts (default: `US`)
+- `STRIPE_CONNECT_ONBOARDING_RETURN_URL` - Return URL after Stripe Connect onboarding
+- `STRIPE_CONNECT_ONBOARDING_REFRESH_URL` - Refresh URL when onboarding link expires
 - `FRONTEND_URL` - Frontend URL for CORS
 - `CLOUDINARY_CLOUD_NAME` (optional: only needed for server-signed uploads)
 - `CLOUDINARY_API_KEY` (optional: only needed for server-signed uploads)

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { InstructorEarningsSummary, CourseRevenueBreakdown, InstructorTransaction } from '../types';
 import * as paymentApi from '../services/payments';
@@ -97,14 +97,34 @@ const RobinhoodChart = ({
   );
 };
 
+type ConnectBusyAction = 'onboard' | 'dashboard' | 'refresh';
+
 const InstructorPaymentsPage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [earnings, setEarnings] = useState<InstructorEarningsSummary | null>(null);
   const [courses, setCourses] = useState<CourseRevenueBreakdown[]>([]);
   const [transactions, setTransactions] = useState<InstructorTransaction[]>([]);
+  const [connectStatus, setConnectStatus] = useState<paymentApi.InstructorStripeConnectStatus | null>(null);
+  const [connectBusy, setConnectBusy] = useState<ConnectBusyAction | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const connectQueryState = useMemo(
+    () => new URLSearchParams(location.search).get('connect'),
+    [location.search]
+  );
+
+  const connectBanner = useMemo(() => {
+    if (connectQueryState === 'return') {
+      return 'Stripe onboarding returned. Refresh status to confirm payouts are fully enabled.';
+    }
+    if (connectQueryState === 'refresh') {
+      return 'Stripe onboarding was refreshed. Continue the setup to enable payouts.';
+    }
+    return null;
+  }, [connectQueryState]);
 
   // Derive chart data from already-fetched transactions & courses
   const revenueSparkline = useMemo(() => {
@@ -136,6 +156,10 @@ const InstructorPaymentsPage = () => {
     });
   }, [courses]);
 
+  const fetchConnectStatus = async () => {
+    return paymentApi.getInstructorStripeConnectStatus();
+  };
+
   useEffect(() => {
     if (!user || (user.role !== 'instructor' && user.role !== 'admin')) {
       navigate('/');
@@ -146,14 +170,16 @@ const InstructorPaymentsPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const [earningsData, coursesData, transactionsData] = await Promise.all([
+        const [earningsData, coursesData, transactionsData, connectStatusData] = await Promise.all([
           paymentApi.getInstructorEarnings(),
           paymentApi.getInstructorCourseRevenue(),
-          paymentApi.getInstructorTransactions()
+          paymentApi.getInstructorTransactions(),
+          fetchConnectStatus()
         ]);
         setEarnings(earningsData);
         setCourses(coursesData);
         setTransactions(transactionsData);
+        setConnectStatus(connectStatusData);
       } catch {
         setError('Failed to load payment data.');
       } finally {
@@ -163,7 +189,62 @@ const InstructorPaymentsPage = () => {
     load();
   }, [user, navigate]);
 
+  const refreshConnectStatus = async () => {
+    setConnectBusy('refresh');
+    setError(null);
+    try {
+      const status = await fetchConnectStatus();
+      setConnectStatus(status);
+    } catch {
+      setError('Failed to refresh Stripe Connect status.');
+    } finally {
+      setConnectBusy(null);
+    }
+  };
+
+  const startConnectRedirectAction = async (
+    action: ConnectBusyAction,
+    getUrl: () => Promise<string>,
+    errorMessage: string
+  ) => {
+    setConnectBusy(action);
+    setError(null);
+    try {
+      const url = await getUrl();
+      window.location.assign(url);
+    } catch {
+      setError(errorMessage);
+      setConnectBusy(null);
+    }
+  };
+
+  const handleStartOnboarding = async () => {
+    await startConnectRedirectAction(
+      'onboard',
+      async () => {
+        const onboarding = await paymentApi.createInstructorStripeConnectOnboarding();
+        return onboarding.url;
+      },
+      'Failed to start Stripe onboarding.'
+    );
+  };
+
+  const handleOpenStripeDashboard = async () => {
+    await startConnectRedirectAction(
+      'dashboard',
+      async () => {
+        const dashboard = await paymentApi.createInstructorStripeConnectDashboardLink();
+        return dashboard.url;
+      },
+      'Failed to open Stripe dashboard.'
+    );
+  };
+
   if (!user) return null;
+
+  const canOpenDashboard = Boolean(connectStatus?.dashboard_available);
+  const needsOnboarding = !connectStatus?.connected || !connectStatus?.onboarding_complete;
+  const dueItemsPreview = connectStatus?.currently_due.slice(0, 5).join(', ');
 
   return (
     <div className="min-h-screen flex">
@@ -271,27 +352,90 @@ const InstructorPaymentsPage = () => {
                 </div>
               )}
 
-              {/* Bank Account Placeholder */}
-              <div className="border-2 border-dashed border-zinc-300 rounded-2xl p-6 mb-8 animate-fade-in-up delay-200">
-                <div className="flex items-center justify-between">
+              {/* Stripe Connect Payout Setup */}
+              <div className="border border-zinc-200 rounded-2xl p-6 mb-8 animate-fade-in-up delay-200 bg-white shadow-sm">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   <div>
                     <h3 className="text-sm font-bold text-zinc-900 font-mono uppercase tracking-widest flex items-center gap-2">
                       <svg className="w-5 h-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z" />
                       </svg>
-                      Bank Account
+                      Stripe Payouts
                     </h3>
                     <p className="text-sm text-zinc-500 mt-1">
-                      Connect your bank account to receive payouts directly.
+                      Connect Stripe to receive instructor payouts into your bank account.
+                    </p>
+                    {connectBanner && (
+                      <p className="mt-2 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1.5 inline-block">
+                        {connectBanner}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={refreshConnectStatus}
+                      className="btn-secondary text-sm"
+                      disabled={connectBusy === 'refresh'}
+                    >
+                      {connectBusy === 'refresh' ? 'Refreshing...' : 'Refresh Status'}
+                    </button>
+                    {canOpenDashboard && (
+                      <button
+                        onClick={handleOpenStripeDashboard}
+                        className="btn-secondary text-sm"
+                        disabled={connectBusy === 'dashboard'}
+                      >
+                        {connectBusy === 'dashboard' ? 'Opening...' : 'Open Stripe Dashboard'}
+                      </button>
+                    )}
+                    {needsOnboarding && (
+                      <button
+                        onClick={handleStartOnboarding}
+                        className="btn-primary text-sm"
+                        disabled={connectBusy === 'onboard'}
+                      >
+                        {connectBusy === 'onboard' ? 'Redirecting...' : 'Complete Onboarding'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+                  <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
+                    <p className="txt-label">Account</p>
+                    <p className={`text-sm font-semibold mt-1 ${connectStatus?.connected ? 'text-emerald-700' : 'text-zinc-600'}`}>
+                      {connectStatus?.connected ? 'Connected' : 'Not connected'}
                     </p>
                   </div>
-                  <button
-                    disabled
-                    className="btn-primary text-sm opacity-50 cursor-not-allowed"
-                  >
-                    Coming Soon
-                  </button>
+                  <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
+                    <p className="txt-label">Charges</p>
+                    <p className={`text-sm font-semibold mt-1 ${connectStatus?.charges_enabled ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {connectStatus?.charges_enabled ? 'Enabled' : 'Pending'}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
+                    <p className="txt-label">Payouts</p>
+                    <p className={`text-sm font-semibold mt-1 ${connectStatus?.payouts_enabled ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {connectStatus?.payouts_enabled ? 'Enabled' : 'Pending'}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
+                    <p className="txt-label">Onboarding</p>
+                    <p className={`text-sm font-semibold mt-1 ${connectStatus?.onboarding_complete ? 'text-emerald-700' : 'text-zinc-600'}`}>
+                      {connectStatus?.onboarding_complete ? 'Complete' : 'Incomplete'}
+                    </p>
+                  </div>
                 </div>
+
+                {connectStatus?.requires_information && connectStatus.currently_due.length > 0 && (
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                    <p className="txt-label text-amber-700">Stripe still needs</p>
+                    <p className="text-xs text-amber-800 mt-1 font-mono">
+                      {dueItemsPreview}
+                      {connectStatus.currently_due.length > 5 ? ', ...' : ''}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Course Revenue Table */}

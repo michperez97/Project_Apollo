@@ -11,6 +11,11 @@ import {
   getInstructorCourseRevenueHandler,
   getInstructorTransactionsHandler
 } from '../controllers/instructorFinanceController';
+import {
+  getInstructorStripeConnectStatusHandler,
+  createInstructorConnectOnboardingLinkHandler,
+  createInstructorConnectDashboardLinkHandler
+} from '../controllers/instructorStripeConnectController';
 
 const router = Router();
 
@@ -23,5 +28,8 @@ router.get('/students', authenticate, authorizeRoles('admin'), listStudentBalanc
 router.get('/instructor/earnings', authenticate, authorizeRoles('admin', 'instructor'), getInstructorEarningsHandler);
 router.get('/instructor/courses', authenticate, authorizeRoles('admin', 'instructor'), getInstructorCourseRevenueHandler);
 router.get('/instructor/transactions', authenticate, authorizeRoles('admin', 'instructor'), getInstructorTransactionsHandler);
+router.get('/instructor/connect/status', authenticate, authorizeRoles('admin', 'instructor'), getInstructorStripeConnectStatusHandler);
+router.post('/instructor/connect/onboard', authenticate, authorizeRoles('admin', 'instructor'), createInstructorConnectOnboardingLinkHandler);
+router.post('/instructor/connect/dashboard', authenticate, authorizeRoles('admin', 'instructor'), createInstructorConnectDashboardLinkHandler);
 
 export default router;

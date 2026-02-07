@@ -7,6 +7,22 @@ export interface CheckoutSessionResponse {
   enrollment?: Enrollment;
 }
 
+export interface InstructorStripeConnectStatus {
+  connected: boolean;
+  account_id: string | null;
+  account_type: 'standard' | 'express' | 'custom' | 'none' | null;
+  details_submitted: boolean;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  requires_information: boolean;
+  currently_due: string[];
+  pending_verification: string[];
+  eventually_due: string[];
+  onboarding_complete: boolean;
+  dashboard_available: boolean;
+  onboarding_completed_at: string | null;
+}
+
 export const createPaymentIntent = async (
   enrollmentId: number
 ): Promise<PaymentIntentSession> => {
@@ -71,4 +87,23 @@ export const getInstructorCourseRevenue = async (): Promise<CourseRevenueBreakdo
 export const getInstructorTransactions = async (): Promise<InstructorTransaction[]> => {
   const { data } = await api.get<{ transactions: InstructorTransaction[] }>('/finance/instructor/transactions');
   return data.transactions;
+};
+
+export const getInstructorStripeConnectStatus = async (): Promise<InstructorStripeConnectStatus> => {
+  const { data } = await api.get<{ status: InstructorStripeConnectStatus }>('/finance/instructor/connect/status');
+  return data.status;
+};
+
+export const createInstructorStripeConnectOnboarding = async (): Promise<{ url: string; account_id: string }> => {
+  const { data } = await api.post<{ onboarding: { url: string; account_id: string } }>(
+    '/finance/instructor/connect/onboard'
+  );
+  return data.onboarding;
+};
+
+export const createInstructorStripeConnectDashboardLink = async (): Promise<{ url: string }> => {
+  const { data } = await api.post<{ dashboard: { url: string } }>(
+    '/finance/instructor/connect/dashboard'
+  );
+  return data.dashboard;
 };
