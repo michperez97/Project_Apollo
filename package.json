@@ -1,7 +1,7 @@
 {
   "name": "project-apollo",
   "version": "1.0.0",
-  "description": "A unified educational platform for small institutions",
+  "description": "A course marketplace platform for instructors and students",
   "private": true,
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
@@ -12,8 +12,8 @@
   },
   "keywords": [
     "education",
-    "lms",
-    "school-management"
+    "course-marketplace",
+    "e-learning"
   ],
   "author": "Project Apollo Team",
   "license": "MIT",

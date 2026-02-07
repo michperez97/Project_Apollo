@@ -36,8 +36,8 @@ Pivot in progress. Marketplace foundations, moderation, and student learning flo
 Project_Apollo/
 ├── backend/          # Express API server
 ├── frontend/         # React application
-├── agent_comunication/ # Pivot plans + project status
-├── Project Documents /  # SRS/SDS docs (directory has trailing space)
+├── agent_communication/ # Pivot plans + project status
+├── Project Documents/   # SRS/SDS docs
 └── PROJECT_APOLLO_CONTEXT.md
 ```
 

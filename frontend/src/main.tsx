@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import App from './App';
+import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -12,16 +13,18 @@ const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : 
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        {stripePromise ? (
-          <Elements stripe={stripePromise}>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          {stripePromise ? (
+            <Elements stripe={stripePromise}>
+              <App />
+            </Elements>
+          ) : (
             <App />
-          </Elements>
-        ) : (
-          <App />
-        )}
-      </AuthProvider>
-    </BrowserRouter>
+          )}
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>
 );

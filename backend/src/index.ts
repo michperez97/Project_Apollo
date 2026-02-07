@@ -1,9 +1,11 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import routes from './routes';
 import { paymentWebhookHandler } from './controllers/paymentController';
+import logger from './config/logger';
 
 // Load environment variables
 dotenv.config();
@@ -35,6 +37,7 @@ for (const origin of configuredOrigins) {
 }
 
 // Middleware
+app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) {
@@ -51,6 +54,12 @@ app.use(cors({
 }));
 app.use(cookieParser());
 
+// Request logging
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  logger.info({ method: req.method, url: req.url }, 'incoming request');
+  next();
+});
+
 // Stripe webhook must receive the raw body for signature verification
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), paymentWebhookHandler);
 
@@ -58,7 +67,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'OK',
     message: 'Project Apollo API is running',
@@ -76,7 +85,7 @@ app.use((req: Request, res: Response) => {
 
 // Global error handler
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-  console.error(err.stack);
+  logger.error({ err, method: req.method, url: req.url }, 'unhandled error');
   res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -85,9 +94,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📚 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  logger.info({ port: PORT, env: process.env.NODE_ENV || 'development' }, 'server started');
 });
 
 export default app;

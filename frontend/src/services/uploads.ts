@@ -1,12 +1,7 @@
-const DEFAULT_CLOUD_NAME = 'dmscdsvfq';
-const DEFAULT_UPLOAD_PRESET = 'apollo_unsigned';
-
 const CLOUDINARY_CLOUD_NAME =
-  (import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined)?.trim() ||
-  DEFAULT_CLOUD_NAME;
+  (import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined)?.trim() || '';
 const CLOUDINARY_UPLOAD_PRESET =
-  (import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined)?.trim() ||
-  DEFAULT_UPLOAD_PRESET;
+  (import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined)?.trim() || '';
 const CLOUDINARY_DEFAULT_FOLDER =
   (import.meta.env.VITE_CLOUDINARY_DEFAULT_FOLDER as string | undefined)?.trim() || undefined;
 
