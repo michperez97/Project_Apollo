@@ -5,7 +5,7 @@ export interface CourseLesson {
   course_id: number;
   section_id: number;
   title: string;
-  lesson_type: 'video' | 'text' | 'quiz';
+  lesson_type: 'video' | 'text' | 'quiz' | 'scorm';
   position: number;
   video_url: string | null;
   content: string | null;

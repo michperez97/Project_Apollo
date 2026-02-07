@@ -4,7 +4,13 @@ import { createUser, findUserByEmail, toPublicUser } from '../models/userModel';
 import { CreateUserInput, SafeUser } from '../types/user';
 import { AuthPayload, AuthResponse } from '../types/auth';
 
-const JWT_SECRET: Secret = process.env.JWT_SECRET || 'dev_secret_key';
+const JWT_SECRET: Secret = (() => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
+  return secret;
+})();
 const JWT_EXPIRES_IN: SignOptions['expiresIn'] = (process.env.JWT_EXPIRES_IN ||
   '7d') as SignOptions['expiresIn'];
 

@@ -1,10 +1,11 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Course } from '../types';
 import * as courseApi from '../services/courses';
 import { uploadFile } from '../services/uploads';
-import { validateImageFile } from '../utils/fileValidation';
+import { importScormPackage } from '../services/scorm';
+import { validateImageFile, validateScormPackageFile } from '../utils/fileValidation';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert, EmptyState } from '../components/Alerts';
 import SideNav from '../components/SideNav';
@@ -32,7 +33,7 @@ const statusBadgeClass = (status: Course['status']) => {
 };
 
 const InstructorCoursesPage = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,10 +44,13 @@ const InstructorCoursesPage = () => {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState<number | null>(null);
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [uploadingScorm, setUploadingScorm] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const maxThumbnailFileSizeBytes = 8 * 1024 * 1024;
+  const maxScormFileSizeBytes = 250 * 1024 * 1024;
+  const scormInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -93,6 +97,51 @@ const InstructorCoursesPage = () => {
       setError(message);
     } finally {
       setUploadingThumbnail(false);
+      e.target.value = '';
+    }
+  };
+
+  const formatImportedCourseTitle = (fileName: string): string => {
+    const withoutExtension = fileName.replace(/\.[^/.]+$/, '');
+    const cleaned = withoutExtension.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    return cleaned || `Imported SCORM ${new Date().toLocaleDateString()}`;
+  };
+
+  const handleScormImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateScormPackageFile(file, maxScormFileSizeBytes);
+    if (validationError) {
+      setError(validationError);
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingScorm(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const packageUrl = await uploadFile(file, 'scorm-packages');
+      const imported = await importScormPackage({
+        packageUrl,
+        fileName: file.name,
+        title: formatImportedCourseTitle(file.name),
+        description: 'Imported from SCORM package.',
+        price: 0
+      });
+      const importedCourse = imported.course;
+
+      setCourses((prev) => [importedCourse, ...prev]);
+      setSuccess(
+        `Imported "${file.name}" as SCORM course "${importedCourse.title}" with playable lesson content.`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to import SCORM package.';
+      setError(message);
+    } finally {
+      setUploadingScorm(false);
       e.target.value = '';
     }
   };
@@ -233,18 +282,29 @@ const InstructorCoursesPage = () => {
           </div>
 
           <div className="flex items-center gap-3 animate-fade-in-up delay-100 pointer-events-auto">
+            <input
+              ref={scormInputRef}
+              type="file"
+              accept=".zip,.pif,application/zip,application/x-zip-compressed"
+              className="hidden"
+              onChange={handleScormImport}
+            />
             <button
               className="btn-primary text-sm"
               onClick={() => { setEditingCourse(null); setCourseForm(defaultCourseForm); setShowModal(true); }}
             >
               Create Course
             </button>
+            <button
+              className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 min-h-[44px] flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm"
+              onClick={() => scormInputRef.current?.click()}
+              disabled={uploadingScorm}
+            >
+              {uploadingScorm ? 'Importing...' : 'Import'}
+            </button>
             <Link to="/dashboard" className="btn-secondary text-sm">
               Dashboard
             </Link>
-            <button className="btn-secondary text-sm" onClick={logout}>
-              Sign out
-            </button>
           </div>
         </header>
 

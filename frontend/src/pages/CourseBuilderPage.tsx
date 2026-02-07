@@ -27,7 +27,7 @@ interface SectionWithLessons extends CourseSection {
 
 const defaultLessonForm = {
   title: '',
-  lesson_type: 'video' as 'video' | 'text' | 'quiz',
+  lesson_type: 'video' as 'video' | 'text' | 'quiz' | 'scorm',
   video_url: '',
   content: '',
   is_preview: false
@@ -203,6 +203,9 @@ const CourseBuilderPage = () => {
       if (lessonForm.lesson_type === 'text' && lessonForm.content) {
         payload.content = lessonForm.content;
       }
+      if (lessonForm.lesson_type === 'scorm' && lessonForm.content) {
+        payload.content = lessonForm.content;
+      }
 
       const lesson = await builder.createLesson(cid, sectionId, payload);
       setSections(prev => prev.map(s =>
@@ -229,7 +232,10 @@ const CourseBuilderPage = () => {
         lesson_type: lessonForm.lesson_type,
         is_preview: lessonForm.is_preview,
         video_url: lessonForm.lesson_type === 'video' ? (lessonForm.video_url || null) : null,
-        content: lessonForm.lesson_type === 'text' ? (lessonForm.content || null) : null
+        content:
+          lessonForm.lesson_type === 'text' || lessonForm.lesson_type === 'scorm'
+            ? (lessonForm.content || null)
+            : null
       };
 
       const updated = await builder.updateLesson(cid, sectionId, editingLessonId, payload);
@@ -307,6 +313,7 @@ const CourseBuilderPage = () => {
       case 'video': return 'Video';
       case 'text': return 'Text';
       case 'quiz': return 'Quiz';
+      case 'scorm': return 'SCORM';
       default: return type;
     }
   };
@@ -577,12 +584,18 @@ const CourseBuilderPage = () => {
                               <label className="block txt-label mb-1">TYPE</label>
                               <select
                                 value={lessonForm.lesson_type}
-                                onChange={(e) => setLessonForm(f => ({ ...f, lesson_type: e.target.value as 'video' | 'text' | 'quiz' }))}
+                                onChange={(e) =>
+                                  setLessonForm((f) => ({
+                                    ...f,
+                                    lesson_type: e.target.value as 'video' | 'text' | 'quiz' | 'scorm'
+                                  }))
+                                }
                                 className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
                               >
                                 <option value="video">Video</option>
                                 <option value="text">Text</option>
                                 <option value="quiz">Quiz</option>
+                                <option value="scorm">SCORM</option>
                               </select>
                             </div>
                             <div className="flex items-end">
@@ -617,6 +630,18 @@ const CourseBuilderPage = () => {
                                 onChange={(e) => setLessonForm(f => ({ ...f, content: e.target.value }))}
                                 rows={4}
                                 className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                              />
+                            </div>
+                          )}
+                          {lessonForm.lesson_type === 'scorm' && (
+                            <div>
+                              <label className="block txt-label mb-1">SCORM METADATA (JSON)</label>
+                              <textarea
+                                value={lessonForm.content}
+                                onChange={(e) => setLessonForm((f) => ({ ...f, content: e.target.value }))}
+                                rows={4}
+                                className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
+                                placeholder='{"scorm_package_id": 12, "launch_path": "index_lms.html"}'
                               />
                             </div>
                           )}

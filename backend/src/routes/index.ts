@@ -18,6 +18,7 @@ import quizRoutes from './quizRoutes';
 import certificateRoutes from './certificateRoutes';
 import profileRoutes from './profileRoutes';
 import notificationRoutes from './notificationRoutes';
+import scormRoutes from './scormRoutes';
 
 const router = Router();
 
@@ -40,5 +41,6 @@ router.use('/quizzes', quizRoutes);
 router.use('/certificates', certificateRoutes);
 router.use('/profiles', profileRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/scorm', scormRoutes);
 
 export default router;

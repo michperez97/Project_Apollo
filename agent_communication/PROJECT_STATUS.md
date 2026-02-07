@@ -6,11 +6,11 @@ Purpose
 
 Completed Work
 1) Step 1 - Audit (complete)
-   - Output: `agent_comunication/PIVOT_AUDIT.md`
+   - Output: `agent_communication/PIVOT_AUDIT.md`
    - Summary: Tagged legacy LMS surfaces and marketplace-ready areas.
 
 2) Step 2 - Target data model + migration plan (complete)
-   - Output: `agent_comunication/PIVOT_DATA_MODEL.md`
+   - Output: `agent_communication/PIVOT_DATA_MODEL.md`
    - Summary: Defined marketplace schema, indexes, and migration phases.
 
 3) Step 3 - Instructor builder + admin moderation (complete)
@@ -90,7 +90,7 @@ Current Plan And Remaining Steps
 3) Step 3 - Instructor builder + moderation (done)
 4) Step 4 - Stripe checkout + webhook (done)
 5) Step 5 - Student experience (done)
-   - Instruction file: `agent_comunication/CLAUDE_STEP_05.md`
+   - Instruction file: `agent_communication/CLAUDE_STEP_05.md`
 6) Step 6 - UI refresh to industrial design system (done)
 7) Step 7 - Remove legacy LMS modules + cleanup (pending)
    - Retire legacy LMS pages, services, models, routes, and migrations.

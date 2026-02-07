@@ -36,8 +36,8 @@ Pivot in progress. Marketplace foundations, moderation, and student learning flo
 Project_Apollo/
 ├── backend/          # Express API server
 ├── frontend/         # React application
-├── agent_comunication/ # Pivot plans + project status
-├── Project Documents /  # SRS/SDS docs (directory has trailing space)
+├── agent_communication/ # Pivot plans + project status
+├── Project Documents/   # SRS/SDS docs
 └── PROJECT_APOLLO_CONTEXT.md
 ```
 
@@ -118,6 +118,7 @@ Override options for `npm run seed`:
 - `CLOUDINARY_CLOUD_NAME` (optional: only needed for server-signed uploads)
 - `CLOUDINARY_API_KEY` (optional: only needed for server-signed uploads)
 - `CLOUDINARY_API_SECRET` (optional: only needed for server-signed uploads)
+- `SCORM_STORAGE_ROOT` - Optional filesystem path for extracted SCORM packages (default: `backend/storage/scorm`)
 - `EMAIL_PROVIDER` - Email provider (`sendgrid`, `log`, or `disabled`)
 - `EMAIL_FROM` - Default sender address (e.g., `no-reply@apollo.local`)
 - `EMAIL_REPLY_TO` - Optional reply-to address
@@ -149,6 +150,11 @@ The app supports direct frontend uploads to Cloudinary using an unsigned preset.
 3. Restart the frontend dev server after env changes.
 
 Uploaded files stay stored in Cloudinary and their `secure_url` is saved in Postgres (profile avatar + course thumbnail fields).
+
+### SCORM Import and Playback
+- In Instructor `My Courses`, use `Import` to upload a `.zip/.pif` package to Cloudinary.
+- Backend imports the package via `/api/scorm/import`, extracts it, parses `imsmanifest.xml`, and creates a draft course with a playable SCORM lesson.
+- Student playback uses `/api/scorm/lessons/:lessonId/attempt` and SCORM runtime routes under `/api/scorm/runtime/:token/:attemptId/*`.
 
 ## Legacy Modules (Being Replaced)
 These exist while the pivot is underway and will be refactored or removed:
