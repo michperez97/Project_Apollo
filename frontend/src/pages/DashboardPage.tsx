@@ -384,7 +384,7 @@ const DashboardPage = () => {
               </button>
 
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-[360px] bg-white border border-zinc-200 rounded-2xl shadow-xl overflow-hidden z-30">
+                <div className="notification-panel-open absolute right-0 mt-2 w-[360px] bg-white border border-zinc-200 rounded-2xl shadow-xl overflow-hidden z-30">
                   <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
                     <div>
                       <p className="text-sm font-bold text-zinc-900">Notifications</p>
