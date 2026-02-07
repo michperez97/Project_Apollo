@@ -1,7 +1,8 @@
 import { api } from './http';
-import { Enrollment, PaymentIntentSession, StudentBalance, Transaction, FinancialSummary, StudentBalanceDetail } from '../types';
+import { Enrollment, PaymentIntentSession, StudentBalance, Transaction, FinancialSummary, StudentBalanceDetail, InstructorEarningsSummary, CourseRevenueBreakdown, InstructorTransaction } from '../types';
 
 export interface CheckoutSessionResponse {
+  checkoutType?: 'payment' | 'subscription';
   checkout?: { id: string; url: string };
   enrollment?: Enrollment;
 }
@@ -16,14 +17,21 @@ export const createPaymentIntent = async (
 };
 
 export const createCheckoutSession = async (
-  courseId: number,
-  studentId?: number
+  payload: { mode: 'payment'; courseId: number; studentId?: number } | { mode: 'subscription'; studentId?: number }
 ): Promise<CheckoutSessionResponse> => {
-  const payload: { courseId: number; student_id?: number } = { courseId };
-  if (studentId) {
-    payload.student_id = studentId;
+  const body: { mode: 'payment' | 'subscription'; courseId?: number; student_id?: number } = {
+    mode: payload.mode
+  };
+
+  if (payload.mode === 'payment') {
+    body.courseId = payload.courseId;
   }
-  const { data } = await api.post<CheckoutSessionResponse>('/payments/checkout', payload);
+
+  if (payload.studentId) {
+    body.student_id = payload.studentId;
+  }
+
+  const { data } = await api.post<CheckoutSessionResponse>('/payments/checkout', body);
   return data;
 };
 
@@ -48,4 +56,19 @@ export const getFinancialSummary = async (): Promise<FinancialSummary> => {
 export const getAllStudentBalances = async (): Promise<StudentBalanceDetail[]> => {
   const { data } = await api.get<{ students: StudentBalanceDetail[] }>('/finance/students');
   return data.students;
+};
+
+export const getInstructorEarnings = async (): Promise<InstructorEarningsSummary> => {
+  const { data } = await api.get<{ earnings: InstructorEarningsSummary }>('/finance/instructor/earnings');
+  return data.earnings;
+};
+
+export const getInstructorCourseRevenue = async (): Promise<CourseRevenueBreakdown[]> => {
+  const { data } = await api.get<{ courses: CourseRevenueBreakdown[] }>('/finance/instructor/courses');
+  return data.courses;
+};
+
+export const getInstructorTransactions = async (): Promise<InstructorTransaction[]> => {
+  const { data } = await api.get<{ transactions: InstructorTransaction[] }>('/finance/instructor/transactions');
+  return data.transactions;
 };

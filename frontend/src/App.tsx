@@ -17,6 +17,7 @@ import InstructorQuizBuilder from './pages/InstructorQuizBuilder';
 import CourseBuilderPage from './pages/CourseBuilderPage';
 import ProfilePage from './pages/ProfilePage';
 import InstructorPublicProfile from './pages/InstructorPublicProfile';
+import InstructorPaymentsPage from './pages/InstructorPaymentsPage';
 
 const App = () => {
   return (
@@ -78,6 +79,14 @@ const App = () => {
         element={
           <ProtectedRoute>
             <AdminFinancialDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/instructor/payments"
+        element={
+          <ProtectedRoute>
+            <InstructorPaymentsPage />
           </ProtectedRoute>
         }
       />

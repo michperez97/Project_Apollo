@@ -3,14 +3,50 @@ import { AuthenticatedRequest } from '../types/auth';
 import { enrollStudent, getEnrollments } from '../services/enrollmentService';
 import { notifyEnrollmentCreated } from '../services/notificationService';
 
+const parseOptionalPositiveInt = (value: unknown): number | undefined | null => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+};
+
 export const listEnrollmentsHandler = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const studentFilter = req.query.studentId ? Number(req.query.studentId) : undefined;
-    const enrollments = await getEnrollments(studentFilter);
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const rawStudentFilter = typeof req.query.studentId === 'string' ? req.query.studentId : undefined;
+    const requestedStudentId = parseOptionalPositiveInt(rawStudentFilter);
+
+    if (requestedStudentId === null) {
+      return res.status(400).json({ error: 'Invalid studentId query param' });
+    }
+
+    if (req.user.role === 'student') {
+      if (requestedStudentId !== undefined && requestedStudentId !== req.user.sub) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const enrollments = await getEnrollments(req.user.sub);
+      return res.json({ enrollments });
+    }
+
+    if (req.user.role === 'instructor' && requestedStudentId === undefined) {
+      return res.status(400).json({ error: 'studentId query param is required for instructors' });
+    }
+
+    const enrollments = await getEnrollments(requestedStudentId);
     return res.json({ enrollments });
   } catch (error) {
     return next(error);
@@ -23,17 +59,29 @@ export const enrollHandler = async (
   next: NextFunction
 ) => {
   try {
-    const { course_id, student_id } = req.body;
-    if (!course_id) {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const courseId = parseOptionalPositiveInt(req.body.course_id);
+    if (courseId === null || courseId === undefined) {
       return res.status(400).json({ error: 'course_id is required' });
     }
 
-    const targetStudentId = student_id ?? req.user?.sub;
-    if (!targetStudentId) {
-      return res.status(400).json({ error: 'student_id is required' });
+    const requestedStudentId = parseOptionalPositiveInt(req.body.student_id);
+    if (requestedStudentId === null) {
+      return res.status(400).json({ error: 'Invalid student_id' });
     }
 
-    const enrollment = await enrollStudent(Number(targetStudentId), Number(course_id));
+    if (req.user.role === 'student' && requestedStudentId !== undefined && requestedStudentId !== req.user.sub) {
+      return res.status(403).json({ error: 'Students can only enroll themselves' });
+    }
+
+    const targetStudentId = req.user.role === 'student'
+      ? req.user.sub
+      : requestedStudentId ?? req.user.sub;
+
+    const enrollment = await enrollStudent(targetStudentId, courseId);
     await notifyEnrollmentCreated(enrollment);
     return res.status(201).json({ enrollment });
   } catch (error) {
@@ -48,4 +96,3 @@ export const enrollHandler = async (
     return next(error);
   }
 };
-

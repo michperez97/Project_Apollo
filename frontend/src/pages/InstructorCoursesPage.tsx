@@ -200,10 +200,6 @@ const InstructorCoursesPage = () => {
     );
   }
 
-  const draftCount = courses.filter(c => c.status === 'draft').length;
-  const pendingCount = courses.filter(c => c.status === 'pending').length;
-  const approvedCount = courses.filter(c => c.status === 'approved').length;
-
   return (
     <div className="min-h-screen flex">
       <SideNav activePage="my-courses" />
@@ -251,61 +247,6 @@ const InstructorCoursesPage = () => {
             <LoadingCard message="Loading courses..." />
           ) : (
             <>
-              {/* Stat Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
-                <div className="stat-card animate-fade-in-up delay-100 group">
-                  <div className="flex justify-between items-start mb-5">
-                    <div className="p-2.5 bg-zinc-500/10 rounded-xl text-zinc-600 border border-zinc-500/20">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
-                      </svg>
-                    </div>
-                    <span className="txt-label">Drafts</span>
-                  </div>
-                  <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">{draftCount}</h3>
-                  <p className="text-xs text-zinc-500 mt-1 font-medium">In progress</p>
-                </div>
-
-                <div className="stat-card animate-fade-in-up delay-200 group">
-                  <div className="flex justify-between items-start mb-5">
-                    <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-600 border border-amber-500/20">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                      </svg>
-                    </div>
-                    <span className="txt-label">Pending</span>
-                  </div>
-                  <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">{pendingCount}</h3>
-                  <p className="text-xs text-zinc-500 mt-1 font-medium">Awaiting review</p>
-                </div>
-
-                <div className="stat-card animate-fade-in-up delay-300 group">
-                  <div className="flex justify-between items-start mb-5">
-                    <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600 border border-emerald-500/20">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                      </svg>
-                    </div>
-                    <span className="txt-label">Published</span>
-                  </div>
-                  <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">{approvedCount}</h3>
-                  <p className="text-xs text-zinc-500 mt-1 font-medium">Live courses</p>
-                </div>
-
-                <div className="stat-card animate-fade-in-up delay-400 group">
-                  <div className="flex justify-between items-start mb-5">
-                    <div className="p-2.5 bg-acid/10 rounded-xl text-lime-600 border border-acid/20">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
-                      </svg>
-                    </div>
-                    <span className="txt-label">Total</span>
-                  </div>
-                  <h3 className="text-3xl font-bold text-zinc-900 mb-1 font-mono tracking-tight">{courses.length}</h3>
-                  <p className="text-xs text-zinc-500 mt-1 font-medium">All courses</p>
-                </div>
-              </div>
-
               {/* Full-width Course List */}
               <div className="animate-fade-in-up delay-300">
                 <div className="flex items-center justify-between mb-4">

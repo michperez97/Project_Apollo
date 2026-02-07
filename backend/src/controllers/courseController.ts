@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import {
   CourseInput,
+  CourseRecord,
   createCourse,
   deleteCourse,
   getCourseById,
@@ -13,12 +14,26 @@ import {
 } from '../models/courseModel';
 import { AuthenticatedRequest } from '../types/auth';
 
+const isScopeAll = (scope: unknown): boolean => typeof scope === 'string' && scope === 'all';
+
+const parsePositiveInt = (value: unknown): number | null => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const canInstructorAccessCourse = (course: CourseRecord, instructorId: number): boolean =>
+  course.instructor_id === instructorId || course.status === 'approved';
+
 export const getCourses = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    if (req.user && (req.user.role === 'admin' || req.user.role === 'instructor')) {
-      const scope = typeof req.query.scope === 'string' ? req.query.scope : '';
-      if (scope === 'all') {
+    const scopeAll = isScopeAll(req.query.scope);
+    if (scopeAll) {
+      if (req.user?.role === 'admin') {
         const courses = await listCourses();
+        return res.json({ courses });
+      }
+      if (req.user?.role === 'instructor') {
+        const courses = await listCoursesByInstructor(req.user.sub);
         return res.json({ courses });
       }
     }
@@ -32,14 +47,17 @@ export const getCourses = async (req: AuthenticatedRequest, res: Response, next:
 
 export const getCourse = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const courseId = Number(req.params.id);
-    if (!Number.isFinite(courseId)) {
+    const courseId = parsePositiveInt(req.params.id);
+    if (!courseId) {
       return res.status(400).json({ error: 'Invalid course id' });
     }
 
-    if (req.user && (req.user.role === 'admin' || req.user.role === 'instructor')) {
+    if (req.user?.role === 'admin' || req.user?.role === 'instructor') {
       const course = await getCourseById(courseId);
       if (!course) {
+        return res.status(404).json({ error: 'Course not found' });
+      }
+      if (req.user.role === 'instructor' && !canInstructorAccessCourse(course, req.user.sub)) {
         return res.status(404).json({ error: 'Course not found' });
       }
       return res.json({ course });
@@ -73,9 +91,11 @@ export const createCourseHandler = async (
       payload.instructor_id = req.user.sub;
       payload.status = payload.status ?? 'draft';
     } else if (req.user?.role === 'admin') {
-      if (!payload.instructor_id || !Number.isFinite(Number(payload.instructor_id))) {
+      const instructorId = parsePositiveInt(payload.instructor_id);
+      if (!instructorId) {
         return res.status(400).json({ error: 'Admin must specify a valid instructor_id' });
       }
+      payload.instructor_id = instructorId;
       payload.status = payload.status ?? 'draft';
     }
 
@@ -92,8 +112,8 @@ export const updateCourseHandler = async (
   next: NextFunction
 ) => {
   try {
-    const courseId = Number(req.params.id);
-    if (!Number.isFinite(courseId)) {
+    const courseId = parsePositiveInt(req.params.id);
+    if (!courseId) {
       return res.status(400).json({ error: 'Invalid course id' });
     }
 
@@ -122,8 +142,8 @@ export const deleteCourseHandler = async (
   next: NextFunction
 ) => {
   try {
-    const courseId = Number(req.params.id);
-    if (!Number.isFinite(courseId)) {
+    const courseId = parsePositiveInt(req.params.id);
+    if (!courseId) {
       return res.status(400).json({ error: 'Invalid course id' });
     }
 
@@ -154,9 +174,9 @@ export const getInstructorCourses = async (
     }
 
     let instructorId: number;
-    if (req.user.role === 'admin' && req.query.instructorId) {
-      const parsed = Number(req.query.instructorId);
-      if (!Number.isFinite(parsed) || parsed <= 0) {
+    if (req.user.role === 'admin' && req.query.instructorId !== undefined) {
+      const parsed = parsePositiveInt(req.query.instructorId);
+      if (!parsed) {
         return res.status(400).json({ error: 'Invalid instructorId' });
       }
       instructorId = parsed;
@@ -186,8 +206,8 @@ export const submitCourseHandler = async (
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const courseId = Number(req.params.id);
-    if (!Number.isFinite(courseId)) {
+    const courseId = parsePositiveInt(req.params.id);
+    if (!courseId) {
       return res.status(400).json({ error: 'Invalid course id' });
     }
 

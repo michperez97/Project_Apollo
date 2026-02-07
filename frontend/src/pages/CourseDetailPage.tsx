@@ -7,6 +7,7 @@ import { getEnrollments } from '../services/enrollments';
 import { Enrollment } from '../types';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert } from '../components/Alerts';
+import { SUBSCRIPTION_MONTHLY_PRICE } from '../config/pricing';
 
 const CourseDetailPage = () => {
   const { courseId } = useParams<{ courseId: string }>();
@@ -15,7 +16,8 @@ const CourseDetailPage = () => {
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [enrolling, setEnrolling] = useState(false);
+  const [courseCheckoutBusy, setCourseCheckoutBusy] = useState(false);
+  const [subscriptionCheckoutBusy, setSubscriptionCheckoutBusy] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -41,12 +43,18 @@ const CourseDetailPage = () => {
     load();
   }, [courseId, user]);
 
-  const handleEnroll = async () => {
+  const refreshEnrollment = async (targetCourseId: number, userId: number) => {
+    const enrollments = await getEnrollments(userId);
+    const found = enrollments.find((item) => item.course_id === targetCourseId);
+    setEnrollment(found || null);
+  };
+
+  const handleCourseCheckout = async () => {
     if (!courseId || !user) return;
-    setEnrolling(true);
+    setCourseCheckoutBusy(true);
     setError(null);
     try {
-      const result = await createCheckoutSession(Number(courseId));
+      const result = await createCheckoutSession({ mode: 'payment', courseId: Number(courseId) });
       if (result.checkout?.url) {
         window.location.href = result.checkout.url;
       } else if (result.enrollment) {
@@ -57,14 +65,32 @@ const CourseDetailPage = () => {
       const axiosError = err as { response?: { data?: { error?: string } } };
       const message = axiosError.response?.data?.error || (err instanceof Error ? err.message : 'Failed to enroll');
       if (message.includes('Already enrolled')) {
-        const enrollments = await getEnrollments(user.id);
-        const found = enrollments.find((e) => e.course_id === Number(courseId));
-        setEnrollment(found || null);
+        await refreshEnrollment(Number(courseId), user.id);
       } else {
         setError(message);
       }
     } finally {
-      setEnrolling(false);
+      setCourseCheckoutBusy(false);
+    }
+  };
+
+  const handleSubscriptionCheckout = async () => {
+    if (!user) return;
+
+    setSubscriptionCheckoutBusy(true);
+    setError(null);
+    try {
+      const result = await createCheckoutSession({ mode: 'subscription' });
+      if (result.checkout?.url) {
+        window.location.href = result.checkout.url;
+      }
+    } catch (err: unknown) {
+      console.error(err);
+      const axiosError = err as { response?: { data?: { error?: string } } };
+      const message = axiosError.response?.data?.error || (err instanceof Error ? err.message : 'Failed to start subscription checkout');
+      setError(message);
+    } finally {
+      setSubscriptionCheckoutBusy(false);
     }
   };
 
@@ -89,6 +115,13 @@ const CourseDetailPage = () => {
 
   const { course, sections, hasFullAccess } = content;
   const isEnrolled = enrollment && enrollment.payment_status === 'paid';
+  const isStudent = user?.role === 'student';
+  const hasActiveSubscription = Boolean(
+    user &&
+      user.subscription_status === 'active' &&
+      (!user.current_period_end || new Date(user.current_period_end).getTime() > Date.now())
+  );
+  const hasCourseAccess = Boolean(hasFullAccess || isEnrolled || hasActiveSubscription);
   const totalLessons = sections.reduce((acc, s) => acc + s.lessons.length, 0);
 
   return (
@@ -154,14 +187,64 @@ const CourseDetailPage = () => {
               </div>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                {isEnrolled ? (
+                {isStudent && hasCourseAccess ? (
                   <Link to={`/learn/${course.id}`} className="btn-primary">
                     Continue Learning
                   </Link>
                 ) : user ? (
-                  <button className="btn-primary" onClick={handleEnroll} disabled={enrolling}>
-                    {enrolling ? 'Processing...' : course.price === 0 ? 'Enroll for Free' : 'Enroll Now'}
-                  </button>
+                  <>
+                    {isStudent ? (
+                      <div className="w-full grid gap-3 sm:grid-cols-2">
+                        <div className="border border-zinc-200 rounded-xl p-4 bg-white/70">
+                          <p className="txt-label mb-1">Option 1</p>
+                          <h3 className="text-sm font-bold text-zinc-900">Buy this Course</h3>
+                          <p className="text-xs text-zinc-600 mt-1 mb-3">
+                            Lifetime access for this course only.
+                          </p>
+                          <p className="font-mono text-lg text-zinc-900 mb-3">
+                            {course.price == null || Number(course.price) === 0 ? 'Free' : `$${Number(course.price).toFixed(0)}`}
+                          </p>
+                          <button
+                            className="btn-primary w-full"
+                            onClick={handleCourseCheckout}
+                            disabled={courseCheckoutBusy || subscriptionCheckoutBusy}
+                          >
+                            {courseCheckoutBusy
+                              ? 'Processing...'
+                              : course.price == null || Number(course.price) === 0
+                                ? 'Enroll for Free'
+                                : 'Buy this Course'}
+                          </button>
+                        </div>
+
+                        <div className="border border-zinc-200 rounded-xl p-4 bg-white/70">
+                          <p className="txt-label mb-1">Option 2</p>
+                          <h3 className="text-sm font-bold text-zinc-900">Get All-Access</h3>
+                          <p className="text-xs text-zinc-600 mt-1 mb-3">
+                            Monthly subscription for all current courses.
+                          </p>
+                          <p className="font-mono text-lg text-zinc-900 mb-3">
+                            ${SUBSCRIPTION_MONTHLY_PRICE.toFixed(0)}/mo
+                          </p>
+                          <button
+                            className="btn-secondary w-full"
+                            onClick={handleSubscriptionCheckout}
+                            disabled={hasActiveSubscription || courseCheckoutBusy || subscriptionCheckoutBusy}
+                          >
+                            {hasActiveSubscription
+                              ? 'Subscription Active'
+                              : subscriptionCheckoutBusy
+                                ? 'Starting Checkout...'
+                                : 'Get All-Access'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Link to="/dashboard" className="btn-primary">
+                        Go to Dashboard
+                      </Link>
+                    )}
+                  </>
                 ) : (
                   <Link to="/login" className="btn-primary">
                     Sign in to Enroll

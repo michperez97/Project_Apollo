@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import dotenv from 'dotenv';
+import { SUBSCRIPTION_PRICE_ID } from '../config/pricing';
 
 dotenv.config();
 
@@ -57,7 +58,15 @@ export interface CheckoutSessionParams {
   cancelUrl: string;
 }
 
-export const createCheckoutSession = async (params: CheckoutSessionParams) => {
+export interface SubscriptionCheckoutSessionParams {
+  studentId: number;
+  customerId?: string | null;
+  customerEmail?: string;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+export const createCourseCheckoutSession = async (params: CheckoutSessionParams) => {
   const {
     amountCents,
     courseId,
@@ -91,6 +100,51 @@ export const createCheckoutSession = async (params: CheckoutSessionParams) => {
   };
 
   if (customerEmail) {
+    sessionParams.customer_email = customerEmail;
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionParams);
+
+  return {
+    id: session.id,
+    url: session.url
+  };
+};
+
+export const createSubscriptionCheckoutSession = async (
+  params: SubscriptionCheckoutSessionParams
+) => {
+  const {
+    studentId,
+    customerId,
+    customerEmail,
+    successUrl,
+    cancelUrl
+  } = params;
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    mode: 'subscription',
+    line_items: [
+      {
+        price: SUBSCRIPTION_PRICE_ID,
+        quantity: 1
+      }
+    ],
+    metadata: {
+      student_id: String(studentId)
+    },
+    subscription_data: {
+      metadata: {
+        student_id: String(studentId)
+      }
+    },
+    success_url: successUrl,
+    cancel_url: cancelUrl
+  };
+
+  if (customerId) {
+    sessionParams.customer = customerId;
+  } else if (customerEmail) {
     sessionParams.customer_email = customerEmail;
   }
 

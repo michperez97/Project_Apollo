@@ -1,4 +1,12 @@
 export type UserRole = 'admin' | 'instructor' | 'student';
+export type SubscriptionStatus =
+  | 'inactive'
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'incomplete'
+  | 'trialing'
+  | 'unpaid';
 
 export interface User {
   id: number;
@@ -6,6 +14,9 @@ export interface User {
   first_name: string;
   last_name: string;
   role: UserRole;
+  subscription_status: SubscriptionStatus;
+  current_period_end: string | null;
+  stripe_customer_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -149,6 +160,32 @@ export interface InstructorProfile {
   email?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface InstructorEarningsSummary {
+  total_direct_sales: number;
+  subscriber_enrollments: number;
+  active_courses: number;
+  avg_direct_sales_per_course: number;
+  currency: string;
+}
+
+export interface CourseRevenueBreakdown {
+  course_id: number;
+  title: string;
+  price: number;
+  direct_sales_count: number;
+  direct_sales_revenue: number;
+  subscriber_enrollments: number;
+}
+
+export interface InstructorTransaction {
+  transaction_id: number;
+  course_title: string;
+  student_id: number;
+  amount: number;
+  status: string;
+  created_at: string;
 }
 
 export interface Announcement {

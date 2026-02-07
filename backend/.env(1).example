@@ -9,6 +9,7 @@ FRONTEND_URL=http://localhost:5173
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 STRIPE_CURRENCY=usd
+SUBSCRIPTION_PRICE_ID=price_sub_placeholder
 
 # Cloudinary
 CLOUDINARY_CLOUD_NAME=your_cloudinary_name

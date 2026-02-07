@@ -11,21 +11,29 @@ const JWT_EXPIRES_IN: SignOptions['expiresIn'] = (process.env.JWT_EXPIRES_IN ||
 const generateToken = (payload: AuthPayload): string =>
   jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as SignOptions);
 
+const normalizeEmail = (email: string): string => email.trim().toLowerCase();
+
 export const registerUser = async (data: CreateUserInput): Promise<AuthResponse> => {
-  const existing = await findUserByEmail(data.email);
+  const normalizedEmail = normalizeEmail(data.email);
+  const existing = await findUserByEmail(normalizedEmail);
   if (existing) {
     throw new Error('Email already in use');
   }
 
   const password_hash = await bcrypt.hash(data.password, 10);
-  const safeUser = await createUser({ ...data, password_hash });
+  const safeUser = await createUser({ ...data, email: normalizedEmail, password_hash });
   const token = generateToken({ sub: safeUser.id, email: safeUser.email, role: safeUser.role });
 
   return { user: safeUser, token };
 };
 
 export const loginUser = async (email: string, password: string): Promise<AuthResponse> => {
-  const user = await findUserByEmail(email);
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    throw new Error('Invalid credentials');
+  }
+
+  const user = await findUserByEmail(normalizedEmail);
   if (!user) {
     throw new Error('Invalid credentials');
   }

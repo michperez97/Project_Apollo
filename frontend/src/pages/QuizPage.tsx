@@ -109,7 +109,7 @@ const QuizPage = () => {
     <div className="min-h-screen bg-stone-100 py-8 px-4">
       <div className="max-w-3xl mx-auto">
         <Link
-          to={`/courses/${quiz.quiz.course_id}/player`}
+          to={`/learn/${quiz.quiz.course_id}`}
           className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-900 mb-6 transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

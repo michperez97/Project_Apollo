@@ -9,6 +9,7 @@ import {
   CourseLesson,
   LessonProgress
 } from '../services/content';
+import { getQuizzesByCourse, Quiz } from '../services/quizzes';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert } from '../components/Alerts';
 
@@ -18,6 +19,7 @@ const CoursePlayerPage = () => {
   const navigate = useNavigate();
   const [content, setContent] = useState<CourseContentResponse | null>(null);
   const [progress, setProgress] = useState<LessonProgress[]>([]);
+  const [courseQuizzes, setCourseQuizzes] = useState<Quiz[]>([]);
   const [currentLesson, setCurrentLesson] = useState<CourseLesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,9 +46,13 @@ const CoursePlayerPage = () => {
           return;
         }
 
-        const progressData = await getCourseProgress(Number(courseId));
+        const [progressData, quizzes] = await Promise.all([
+          getCourseProgress(Number(courseId)),
+          getQuizzesByCourse(Number(courseId)).catch(() => [])
+        ]);
         setContent(contentData);
         setProgress(progressData);
+        setCourseQuizzes(quizzes);
 
         const allLessons = contentData.sections.flatMap((s) => s.lessons);
         if (allLessons.length > 0) {
@@ -218,32 +224,42 @@ const CoursePlayerPage = () => {
     }
 
     if (currentLesson.lesson_type === 'quiz') {
-      // Check if this lesson has a linked quiz (new quiz system)
-      // For now, we'll redirect to the quiz page based on lesson title matching
-      // In a full implementation, you'd store quiz_id in the lesson or fetch quizzes by lesson_id
+      const linkedQuiz = courseQuizzes.find((quiz) => quiz.lesson_id === currentLesson.id);
+
+      if (!linkedQuiz) {
+        return (
+          <div className="panel-technical p-8">
+            <h3 className="text-xl font-bold text-zinc-900 mb-4">{currentLesson.title}</h3>
+            <p className="text-zinc-600">
+              This lesson is marked as a quiz, but no quiz is linked yet. Ask your instructor to publish one.
+            </p>
+          </div>
+        );
+      }
+
       return (
         <div className="panel-technical p-8">
-          <h3 className="text-xl font-bold text-zinc-900 mb-4">{currentLesson.title}</h3>
-          <p className="text-zinc-600 mb-6">
-            This quiz will test your knowledge of data structures and algorithms.
-          </p>
+          <h3 className="text-xl font-bold text-zinc-900 mb-4">{linkedQuiz.title}</h3>
+          <p className="text-zinc-600 mb-6">{linkedQuiz.description || 'Complete this quiz to test your progress.'}</p>
           <div className="bg-stone-50 border border-zinc-200 rounded-lg p-6 mb-6">
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <p className="txt-label mb-1">QUESTIONS</p>
-                <p className="text-2xl font-bold text-zinc-900">3</p>
+                <p className="txt-label mb-1">QUIZ ID</p>
+                <p className="text-2xl font-bold text-zinc-900">{linkedQuiz.id}</p>
               </div>
               <div>
                 <p className="txt-label mb-1">PASSING SCORE</p>
-                <p className="text-2xl font-bold text-zinc-900">70%</p>
+                <p className="text-2xl font-bold text-zinc-900">{linkedQuiz.passing_score}%</p>
               </div>
               <div>
                 <p className="txt-label mb-1">TIME LIMIT</p>
-                <p className="text-2xl font-bold text-zinc-900">30m</p>
+                <p className="text-2xl font-bold text-zinc-900">
+                  {linkedQuiz.time_limit_minutes ? `${linkedQuiz.time_limit_minutes}m` : 'None'}
+                </p>
               </div>
             </div>
           </div>
-          <Link to="/quiz/1" className="btn-primary">
+          <Link to={`/quiz/${linkedQuiz.id}`} className="btn-primary">
             Take Quiz
           </Link>
         </div>

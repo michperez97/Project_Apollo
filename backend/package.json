@@ -4,7 +4,7 @@
   "description": "Project Apollo Backend API",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon src/index.ts",
+    "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/index.js",
     "migrate:up": "node-pg-migrate up",
