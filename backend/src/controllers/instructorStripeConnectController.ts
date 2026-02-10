@@ -1,3 +1,4 @@
+import Stripe from 'stripe';
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../types/auth';
 import {
@@ -52,6 +53,16 @@ const handleStripeConnectControllerError = (
 ) => {
   if (error instanceof StripeConnectError) {
     return res.status(error.statusCode).json({ error: error.message });
+  }
+
+  if (error instanceof Stripe.errors.StripeError) {
+    if (error.type === 'StripeAuthenticationError') {
+      return res.status(503).json({
+        error: 'Stripe authentication failed. Check STRIPE_SECRET_KEY in backend/.env.'
+      });
+    }
+
+    return res.status(502).json({ error: error.message });
   }
 
   return next(error);

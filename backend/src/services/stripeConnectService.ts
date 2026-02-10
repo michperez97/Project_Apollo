@@ -4,6 +4,7 @@ import { UserRecord } from '../types/user';
 import { getStripeClient } from './stripeService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY ?? '';
 const STRIPE_CONNECT_COUNTRY = (process.env.STRIPE_CONNECT_COUNTRY || 'US').toUpperCase();
 const STRIPE_CONNECT_ONBOARDING_RETURN_URL =
   process.env.STRIPE_CONNECT_ONBOARDING_RETURN_URL ||
@@ -11,6 +12,31 @@ const STRIPE_CONNECT_ONBOARDING_RETURN_URL =
 const STRIPE_CONNECT_ONBOARDING_REFRESH_URL =
   process.env.STRIPE_CONNECT_ONBOARDING_REFRESH_URL ||
   `${FRONTEND_URL}/instructor/payments?connect=refresh`;
+
+const isPlaceholderStripeKey = (key: string): boolean => {
+  const trimmed = key.trim();
+  if (!trimmed) {
+    return true;
+  }
+
+  const lowered = trimmed.toLowerCase();
+  return (
+    lowered.includes('your_stripe_secret_key') ||
+    lowered === 'sk_test_your_stripe_secret_key' ||
+    lowered === 'sk_live_your_stripe_secret_key'
+  );
+};
+
+const STRIPE_CONFIGURED = !isPlaceholderStripeKey(STRIPE_SECRET_KEY);
+
+const assertStripeConfigured = () => {
+  if (!STRIPE_CONFIGURED) {
+    throw new StripeConnectError(
+      503,
+      'Stripe is not configured. Set STRIPE_SECRET_KEY in backend/.env.'
+    );
+  }
+};
 
 export class StripeConnectError extends Error {
   statusCode: number;
@@ -23,6 +49,7 @@ export class StripeConnectError extends Error {
 }
 
 export interface StripeConnectStatus {
+  stripe_configured: boolean;
   connected: boolean;
   account_id: string | null;
   account_type: Stripe.Account['type'] | null;
@@ -57,6 +84,7 @@ const disconnectedStatus = (
   accountId: string | null,
   onboardedAt: Date | null
 ): StripeConnectStatus => ({
+  stripe_configured: STRIPE_CONFIGURED,
   connected: false,
   account_id: accountId,
   account_type: null,
@@ -144,6 +172,7 @@ export const getInstructorStripeConnectStatus = async (
     return disconnectedStatus(null, user.stripe_connect_onboarded_at ?? null);
   }
 
+  assertStripeConfigured();
   const stripe = getStripeClient();
   let account: Stripe.Account;
 
@@ -178,6 +207,7 @@ export const getInstructorStripeConnectStatus = async (
   }
 
   return {
+    stripe_configured: STRIPE_CONFIGURED,
     connected: true,
     account_id: account.id,
     account_type: account.type ?? null,
@@ -197,6 +227,7 @@ export const getInstructorStripeConnectStatus = async (
 export const createInstructorConnectOnboardingLink = async (
   instructorId: number
 ): Promise<{ url: string; accountId: string }> => {
+  assertStripeConfigured();
   const user = await assertInstructorExists(instructorId);
   const accountId = await resolveOrCreateAccountId(user);
   const stripe = getStripeClient();
@@ -217,6 +248,7 @@ export const createInstructorConnectOnboardingLink = async (
 export const createInstructorConnectDashboardLink = async (
   instructorId: number
 ): Promise<string> => {
+  assertStripeConfigured();
   const user = await assertInstructorExists(instructorId);
   const accountId = user.stripe_connect_account_id;
 
