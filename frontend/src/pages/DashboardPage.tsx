@@ -247,7 +247,6 @@ const DashboardPage = () => {
 
   const paidEnrollments = enrollments.filter(e => e.payment_status === 'paid').length;
   const pendingEnrollments = enrollments.filter(e => e.payment_status !== 'paid').length;
-  const unreadNotifications = notifications.filter((item) => !item.is_read).length;
   const categoryCounts = courses.reduce<Record<string, number>>((acc, course) => {
     const key = (course.category ?? 'General').trim() || 'General';
     acc[key] = (acc[key] ?? 0) + 1;

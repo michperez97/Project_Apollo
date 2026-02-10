@@ -188,7 +188,7 @@ export const updateScormAttemptRuntime = async (
          suspend_data = $8,
          completed_at = CASE
            WHEN $9::timestamp IS NOT NULL THEN $9
-           WHEN status IN ('completed', 'passed', 'failed') THEN COALESCE(completed_at, CURRENT_TIMESTAMP)
+           WHEN $2 IN ('completed', 'passed', 'failed') THEN COALESCE(completed_at, CURRENT_TIMESTAMP)
            ELSE completed_at
          END,
          last_accessed_at = CURRENT_TIMESTAMP,

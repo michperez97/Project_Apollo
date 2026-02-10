@@ -11,8 +11,18 @@ import {
 } from '../services/content';
 import { getQuizzesByCourse, Quiz } from '../services/quizzes';
 import { startScormAttempt } from '../services/scorm';
+import { getApiBaseUrl } from '../services/http';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert } from '../components/Alerts';
+
+const resolveApiOrigin = (): string => {
+  const base = getApiBaseUrl();
+  try {
+    return new URL(base, window.location.origin).origin;
+  } catch {
+    return window.location.origin;
+  }
+};
 
 const CoursePlayerPage = () => {
   const { courseId } = useParams<{ courseId: string }>();
@@ -314,6 +324,7 @@ const CoursePlayerPage = () => {
 
     if (currentLesson.lesson_type === 'scorm') {
       const launchUrl = scormLaunchUrls[currentLesson.id];
+      const iframeSrc = launchUrl ? new URL(launchUrl, resolveApiOrigin()).toString() : null;
       const isLoading = loadingScormLessonId === currentLesson.id;
 
       return (
@@ -326,15 +337,15 @@ const CoursePlayerPage = () => {
               <p className="text-zinc-600">Initializing SCORM runtime...</p>
             </div>
           )}
-          {launchUrl && (
+          {iframeSrc && (
             <iframe
-              src={launchUrl}
+              src={iframeSrc}
               title={currentLesson.title}
               className="w-full h-[70vh] rounded-xl border border-zinc-200 bg-white"
               allow="fullscreen"
             />
           )}
-          {!launchUrl && !isLoading && !scormError && (
+          {!iframeSrc && !isLoading && !scormError && (
             <div className="panel-technical p-6">
               <p className="text-zinc-600">SCORM launch URL is not available.</p>
             </div>
