@@ -168,6 +168,14 @@ const upsertSubmission = async (
   return result.rows[0].id;
 };
 
+const tableExists = async (tableName: string): Promise<boolean> => {
+  const result = await pool.query<{ exists: boolean }>(
+    `SELECT to_regclass($1) IS NOT NULL AS exists`,
+    [tableName]
+  );
+  return Boolean(result.rows[0]?.exists);
+};
+
 const main = async () => {
   const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
 
@@ -202,6 +210,65 @@ const main = async () => {
     grade: 95,
     feedback: 'Great start!'
   });
+
+  if (await tableExists('conversations')) {
+    // Seed a sample inbox thread (idempotent).
+    const existing = await pool.query<{ id: number }>(
+      `
+      SELECT c.id
+      FROM conversations c
+      WHERE c.course_id = $1
+        AND EXISTS (
+          SELECT 1 FROM conversation_participants p
+          WHERE p.conversation_id = c.id AND p.user_id = $2
+        )
+        AND EXISTS (
+          SELECT 1 FROM conversation_participants p
+          WHERE p.conversation_id = c.id AND p.user_id = $3
+        )
+        AND (
+          SELECT COUNT(*) FROM conversation_participants p
+          WHERE p.conversation_id = c.id
+        ) = 2
+      LIMIT 1
+      `,
+      [course.id, instructor.id, student.id]
+    );
+
+    if (existing.rows[0]) {
+      await pool.query('DELETE FROM conversations WHERE id = $1', [existing.rows[0].id]);
+    }
+
+    const created = await pool.query<{ id: number }>(
+      `INSERT INTO conversations (course_id, subject) VALUES ($1, $2) RETURNING id`,
+      [course.id, 'Welcome to Apollo']
+    );
+    const conversationId = created.rows[0].id;
+
+    await pool.query(
+      `
+      INSERT INTO conversation_participants (conversation_id, user_id, last_read_at)
+      VALUES ($1, $2, CURRENT_TIMESTAMP), ($1, $3, CURRENT_TIMESTAMP)
+      `,
+      [conversationId, instructor.id, student.id]
+    );
+
+    await pool.query(
+      `
+      INSERT INTO conversation_messages (conversation_id, sender_id, body)
+      VALUES
+        ($1, $2, $3),
+        ($1, $4, $5)
+      `,
+      [
+        conversationId,
+        instructor.id,
+        "Welcome. If you get stuck, message me here and I'll help you unblock quickly.",
+        student.id,
+        'Thanks! Excited to start the course.'
+      ]
+    );
+  }
 
   console.log('Seed complete');
   console.log(`Admin: ${admin.email}`);

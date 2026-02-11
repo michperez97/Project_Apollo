@@ -18,6 +18,7 @@ import CourseBuilderPage from './pages/CourseBuilderPage';
 import ProfilePage from './pages/ProfilePage';
 import InstructorPublicProfile from './pages/InstructorPublicProfile';
 import InstructorPaymentsPage from './pages/InstructorPaymentsPage';
+import InstructorInboxPage from './pages/InstructorInboxPage';
 
 const App = () => {
   return (
@@ -87,6 +88,14 @@ const App = () => {
         element={
           <ProtectedRoute>
             <InstructorPaymentsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/instructor/inbox"
+        element={
+          <ProtectedRoute>
+            <InstructorInboxPage />
           </ProtectedRoute>
         }
       />
