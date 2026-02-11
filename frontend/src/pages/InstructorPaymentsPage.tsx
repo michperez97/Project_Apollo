@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { InstructorEarningsSummary, CourseRevenueBreakdown, InstructorTransaction } from '../types';
 import * as paymentApi from '../services/payments';
@@ -33,6 +34,24 @@ const buildSmoothPath = (points: Array<{ x: number; y: number }>): string => {
     path += ` Q ${controlX} ${prev.y} ${curr.x} ${curr.y}`;
   }
   return path;
+};
+
+const resolveRequestError = (error: unknown, fallback: string): string => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { error?: unknown; message?: unknown } | undefined;
+    if (typeof data?.error === 'string' && data.error.trim()) {
+      return data.error;
+    }
+    if (typeof data?.message === 'string' && data.message.trim()) {
+      return data.message;
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
 };
 
 const RobinhoodChart = ({
@@ -212,8 +231,8 @@ const InstructorPaymentsPage = () => {
     try {
       const url = await getUrl();
       window.location.assign(url);
-    } catch {
-      setError(errorMessage);
+    } catch (error) {
+      setError(resolveRequestError(error, errorMessage));
       setConnectBusy(null);
     }
   };
@@ -245,6 +264,7 @@ const InstructorPaymentsPage = () => {
   const canOpenDashboard = Boolean(connectStatus?.dashboard_available);
   const needsOnboarding = !connectStatus?.connected || !connectStatus?.onboarding_complete;
   const dueItemsPreview = connectStatus?.currently_due.slice(0, 5).join(', ');
+  const stripeConfigured = connectStatus?.stripe_configured ?? true;
 
   return (
     <div className="min-h-screen flex">
@@ -392,13 +412,27 @@ const InstructorPaymentsPage = () => {
                       <button
                         onClick={handleStartOnboarding}
                         className="btn-primary text-sm"
-                        disabled={connectBusy === 'onboard'}
+                        disabled={connectBusy === 'onboard' || !stripeConfigured}
                       >
-                        {connectBusy === 'onboard' ? 'Redirecting...' : 'Complete Onboarding'}
+                        {!stripeConfigured
+                          ? 'Stripe not configured'
+                          : connectBusy === 'onboard'
+                            ? 'Redirecting...'
+                            : 'Complete Onboarding'}
                       </button>
                     )}
                   </div>
                 </div>
+
+                {!stripeConfigured && (
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                    <p className="txt-label text-amber-700">Stripe setup required</p>
+                    <p className="text-xs text-amber-800 mt-1">
+                      Stripe is not configured on the server. Set <span className="font-mono">STRIPE_SECRET_KEY</span> in{' '}
+                      <span className="font-mono">backend/.env</span> to a real Stripe test key, then refresh.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
                   <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">

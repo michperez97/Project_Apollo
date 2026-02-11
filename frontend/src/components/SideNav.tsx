@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface SideNavProps {
-  activePage: 'overview' | 'my-learning' | 'my-courses' | 'moderation' | 'finance' | 'payments' | 'profile';
+  activePage: 'overview' | 'inbox' | 'my-learning' | 'my-courses' | 'moderation' | 'finance' | 'payments' | 'profile';
 }
 
 const linkBase = 'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200';
@@ -49,6 +49,15 @@ const SideNav = ({ activePage }: SideNavProps) => {
               </svg>
               <span className="text-sm font-medium">Overview</span>
             </Link>
+
+            {(user.role === 'admin' || user.role === 'instructor') && (
+              <Link to="/instructor/inbox" className={activePage === 'inbox' ? linkActive : linkInactive}>
+                <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 3H4.99C3.89 3 3 3.89 3 4.99v14.02C3 20.11 3.89 21 4.99 21H19c1.1 0 2-.89 2-1.99V4.99C21 3.89 20.11 3 19 3zm0 12h-3.1c-.55 0-1.05.3-1.3.78l-.62 1.24c-.17.34-.52.56-.9.56h-2.2c-.38 0-.73-.22-.9-.56l-.62-1.24c-.25-.48-.75-.78-1.3-.78H5V5h14v10z" />
+                </svg>
+                <span className="text-sm font-medium">Inbox</span>
+              </Link>
+            )}
 
             {user.role === 'student' && (
               <Link to="/student/dashboard" className={activePage === 'my-learning' ? linkActive : linkInactive}>

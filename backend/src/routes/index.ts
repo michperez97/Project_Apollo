@@ -19,6 +19,7 @@ import certificateRoutes from './certificateRoutes';
 import profileRoutes from './profileRoutes';
 import notificationRoutes from './notificationRoutes';
 import scormRoutes from './scormRoutes';
+import inboxRoutes from './inboxRoutes';
 
 const router = Router();
 
@@ -42,5 +43,6 @@ router.use('/certificates', certificateRoutes);
 router.use('/profiles', profileRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/scorm', scormRoutes);
+router.use('/inbox', inboxRoutes);
 
 export default router;

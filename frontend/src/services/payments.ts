@@ -8,6 +8,7 @@ export interface CheckoutSessionResponse {
 }
 
 export interface InstructorStripeConnectStatus {
+  stripe_configured?: boolean;
   connected: boolean;
   account_id: string | null;
   account_type: 'standard' | 'express' | 'custom' | 'none' | null;

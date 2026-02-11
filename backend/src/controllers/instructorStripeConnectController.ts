@@ -1,3 +1,4 @@
+import Stripe from 'stripe';
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../types/auth';
 import {
@@ -52,6 +53,27 @@ const handleStripeConnectControllerError = (
 ) => {
   if (error instanceof StripeConnectError) {
     return res.status(error.statusCode).json({ error: error.message });
+  }
+
+  if (error instanceof Stripe.errors.StripeError) {
+    const message = error.message || '';
+    const lowered = message.toLowerCase();
+
+    // Stripe returns this when the platform account has not enabled Connect.
+    if (lowered.includes("signed up for connect")) {
+      return res.status(503).json({
+        error:
+          "Stripe Connect isn't enabled for this Stripe account. In the Stripe Dashboard, enable Connect (Settings -> Connect) and try again."
+      });
+    }
+
+    if (error.type === 'StripeAuthenticationError') {
+      return res.status(503).json({
+        error: 'Stripe authentication failed. Check STRIPE_SECRET_KEY in backend/.env.'
+      });
+    }
+
+    return res.status(502).json({ error: message || 'Stripe request failed' });
   }
 
   return next(error);

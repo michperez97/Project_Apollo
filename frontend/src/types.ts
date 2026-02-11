@@ -218,3 +218,36 @@ export interface NotificationFeedItem {
   created_at: string;
   is_read: boolean;
 }
+
+export interface InboxUserSummary {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+}
+
+export interface InboxConversationSummary {
+  id: number;
+  course_id: number | null;
+  course_title: string | null;
+  subject: string | null;
+  created_at: string;
+  updated_at: string;
+  last_message_body: string | null;
+  last_message_at: string | null;
+  last_message_sender_id: number | null;
+  participants: InboxUserSummary[];
+  unread_count: number;
+}
+
+export interface InboxMessage {
+  id: number;
+  conversation_id: number;
+  sender_id: number;
+  sender_first_name: string;
+  sender_last_name: string;
+  sender_role: UserRole;
+  body: string;
+  created_at: string;
+}

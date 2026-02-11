@@ -1,22 +1,22 @@
 import axios from 'axios';
-import { execFile } from 'child_process';
 import { randomUUID } from 'crypto';
+import { createWriteStream } from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
-import { promisify } from 'util';
+import { pipeline } from 'stream/promises';
 import pool from '../config/database';
 import { CourseRecord } from '../models/courseModel';
 import { CourseLessonRecord } from '../models/courseLessonModel';
 import { CourseSectionRecord } from '../models/courseSectionModel';
 import { ScormPackageRecord } from '../models/scormPackageModel';
-
-const execFileAsync = promisify(execFile);
+import unzipper from 'unzipper';
 
 const SCORM_STORAGE_ROOT = path.resolve(
   process.env.SCORM_STORAGE_ROOT || path.join(process.cwd(), 'storage', 'scorm')
 );
 
 const MAX_SCORM_PACKAGE_BYTES = 300 * 1024 * 1024;
+const MAX_SCORM_PACKAGE_FILES = 5000;
 
 const deriveTitleFromFileName = (fileName: string): string => {
   const withoutExtension = fileName.replace(/\.[^/.]+$/, '');
@@ -189,13 +189,39 @@ const downloadPackage = async (packageUrl: string, outputPath: string): Promise<
 };
 
 const extractPackage = async (zipPath: string, outputDirectory: string): Promise<void> => {
-  try {
-    await execFileAsync('unzip', ['-qq', '-o', zipPath, '-d', outputDirectory]);
-  } catch (error) {
-    if (error instanceof Error && /ENOENT/.test(error.message)) {
-      throw new Error('SCORM extractor is not available on the server (missing unzip)');
+  const directory = await unzipper.Open.file(zipPath);
+  if (directory.files.length > MAX_SCORM_PACKAGE_FILES) {
+    throw new Error('SCORM package has too many files');
+  }
+
+  for (const entry of directory.files) {
+    const rawEntryPath = entry.path.replace(/\\/g, '/').trim();
+    const normalizedEntryPath = path.posix.normalize(rawEntryPath).replace(/^\.\/+/, '');
+
+    if (
+      !normalizedEntryPath ||
+      normalizedEntryPath.startsWith('..') ||
+      path.posix.isAbsolute(normalizedEntryPath)
+    ) {
+      throw new Error(`SCORM package contains invalid file path: ${entry.path}`);
     }
-    throw new Error('Failed to extract SCORM package archive');
+
+    const targetPath = ensureInsideRoot(
+      outputDirectory,
+      path.join(outputDirectory, ...normalizedEntryPath.split('/'))
+    );
+
+    if (entry.type === 'Directory') {
+      await fs.mkdir(targetPath, { recursive: true });
+      continue;
+    }
+
+    if (entry.type !== 'File') {
+      throw new Error(`SCORM package contains unsupported entry type: ${entry.type}`);
+    }
+
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+    await pipeline(entry.stream(), createWriteStream(targetPath));
   }
 };
 
