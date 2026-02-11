@@ -234,7 +234,7 @@ const InstructorInboxPage = () => {
       <SideNav activePage="inbox" />
 
       <main className="flex-1 relative z-10 h-screen overflow-hidden pl-16 transition-all duration-300">
-        <header className="absolute top-0 left-0 w-full px-6 md:px-10 py-6 flex items-center justify-between z-20 pointer-events-none">
+        <header className="absolute top-0 left-0 w-full pl-[calc(4rem+1.5rem)] pr-6 md:pl-[calc(4rem+2.5rem)] md:pr-10 py-6 flex items-center justify-between z-20 pointer-events-none">
           <div className="floating-tile animate-fade-in-up pointer-events-auto">
             <h1 className="text-lg text-zinc-900 font-bold tracking-tight flex items-center">
               Apollo

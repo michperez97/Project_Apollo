@@ -88,31 +88,107 @@ const DashboardPage = () => {
       setError(null);
       try {
         if (isInstructorView) {
-          const [instructorCourses, anns, feed] = await Promise.all([
+          const [coursesResult, announcementsResult, notificationsResult] = await Promise.allSettled([
             courseApi.getInstructorCourses(),
             announcementApi.getAnnouncements(),
             notificationApi.getNotifications()
-          ]);
-          setCourses(instructorCourses);
-          setAnnouncements(anns);
-          setNotifications(feed);
+          ]) as [
+            PromiseSettledResult<Course[]>,
+            PromiseSettledResult<Announcement[]>,
+            PromiseSettledResult<NotificationFeedItem[]>
+          ];
+
+          const criticalFailures: string[] = [];
+
+          if (coursesResult.status === 'fulfilled') {
+            setCourses(coursesResult.value);
+          } else {
+            setCourses([]);
+            criticalFailures.push('courses');
+          }
+
+          if (announcementsResult.status === 'fulfilled') {
+            setAnnouncements(announcementsResult.value);
+          } else {
+            setAnnouncements([]);
+          }
+
+          if (notificationsResult.status === 'fulfilled') {
+            setNotifications(notificationsResult.value);
+          } else {
+            setNotifications([]);
+          }
+
+          if (criticalFailures.length) {
+            setError('Failed to load dashboard data.');
+          }
         } else {
-          const promises: Promise<unknown>[] = [
+          const [
+            coursesResult,
+            enrollmentsResult,
+            announcementsResult,
+            balanceResult,
+            transactionsResult,
+            notificationsResult
+          ] = await Promise.allSettled([
             courseApi.getCourses(),
             enrollmentApi.getEnrollments(user.id),
             announcementApi.getAnnouncements(),
             paymentApi.getBalance(),
             paymentApi.getTransactions(),
             notificationApi.getNotifications()
+          ]) as [
+            PromiseSettledResult<Course[]>,
+            PromiseSettledResult<Enrollment[]>,
+            PromiseSettledResult<Announcement[]>,
+            PromiseSettledResult<StudentBalance>,
+            PromiseSettledResult<Transaction[]>,
+            PromiseSettledResult<NotificationFeedItem[]>
           ];
 
-          const results = await Promise.all(promises);
-          setCourses(results[0] as Course[]);
-          setEnrollments(results[1] as Enrollment[]);
-          setAnnouncements(results[2] as Announcement[]);
-          setBalance(results[3] as StudentBalance);
-          setTransactions(results[4] as Transaction[]);
-          setNotifications(results[5] as NotificationFeedItem[]);
+          const criticalFailures: string[] = [];
+
+          if (coursesResult.status === 'fulfilled') {
+            setCourses(coursesResult.value);
+          } else {
+            setCourses([]);
+            criticalFailures.push('courses');
+          }
+
+          if (enrollmentsResult.status === 'fulfilled') {
+            setEnrollments(enrollmentsResult.value);
+          } else {
+            setEnrollments([]);
+            criticalFailures.push('enrollments');
+          }
+
+          if (announcementsResult.status === 'fulfilled') {
+            setAnnouncements(announcementsResult.value);
+          } else {
+            setAnnouncements([]);
+          }
+
+          if (balanceResult.status === 'fulfilled') {
+            setBalance(balanceResult.value);
+          } else {
+            setBalance(null);
+          }
+
+          if (transactionsResult.status === 'fulfilled') {
+            setTransactions(transactionsResult.value);
+          } else {
+            setTransactions([]);
+          }
+
+          if (notificationsResult.status === 'fulfilled') {
+            setNotifications(notificationsResult.value);
+          } else {
+            setNotifications([]);
+          }
+
+          if (criticalFailures.length) {
+            setError('Failed to load dashboard data.');
+          }
         }
       } catch {
         setError('Failed to load dashboard data.');
@@ -265,7 +341,7 @@ const DashboardPage = () => {
       {/* Main Content */}
       <main className="flex-1 relative z-10 h-screen overflow-hidden pl-16 transition-all duration-300">
         {/* Floating Header */}
-        <header className="absolute top-0 left-0 w-full px-6 md:px-10 py-6 flex items-center justify-between z-20 pointer-events-none">
+        <header className="absolute top-0 left-0 w-full pl-[calc(4rem+1.5rem)] pr-6 md:pl-[calc(4rem+2.5rem)] md:pr-10 py-6 flex items-center justify-between z-20 pointer-events-none">
           {/* Left tile */}
           <div className="floating-tile animate-fade-in-up pointer-events-auto">
             <h1 className="text-lg text-zinc-900 font-bold tracking-tight flex items-center">

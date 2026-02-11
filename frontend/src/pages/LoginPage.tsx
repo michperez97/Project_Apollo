@@ -29,9 +29,6 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      <div className="absolute -top-40 -right-32 h-96 w-96 rounded-full bg-lime-200/35 blur-3xl" />
-      <div className="absolute -bottom-48 left-12 h-96 w-96 rounded-full bg-amber-200/35 blur-3xl" />
-
       <div className="relative z-10 min-h-screen flex flex-col">
         <header className="px-6 md:px-10 py-6 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
