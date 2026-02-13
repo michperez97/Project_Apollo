@@ -27,10 +27,22 @@ const ChatWidget = () => {
   const [chatSending, setChatSending] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const widgetRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, chatSending]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (widgetRef.current && !widgetRef.current.contains(event.target as Node)) {
+        setChatOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleChatSend = async (override?: string) => {
     const content = (override ?? chatInput).trim();
@@ -64,13 +76,13 @@ const ChatWidget = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-[60]">
-      <div className="relative w-10 h-10 group">
+    <div ref={widgetRef} className="fixed bottom-6 right-6 z-[60]">
+      <div className="relative w-10 h-10">
         <div
           className={`absolute bottom-0 right-0 w-[360px] h-[550px] bg-zinc-900 rounded-2xl flex flex-col overflow-hidden transition-all duration-300 transform origin-bottom-right border border-zinc-800 shadow-2xl ${
             chatOpen
               ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
-              : 'opacity-0 pointer-events-none scale-95 translate-y-4 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 group-hover:pointer-events-auto'
+              : 'opacity-0 pointer-events-none scale-95 translate-y-4'
           }`}
         >
           <div className="h-16 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-5 shrink-0">
@@ -231,13 +243,11 @@ const ChatWidget = () => {
 
         <button
           onClick={() => setChatOpen((prev) => !prev)}
-          className={`relative w-10 h-10 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:shadow-acid/20 border border-white/10 transition-all duration-300 hover:scale-105 active:scale-95 z-50 overflow-hidden ${
-            chatOpen ? 'opacity-0 pointer-events-none' : 'group-hover:opacity-0 group-hover:pointer-events-none'
+          className={`relative w-10 h-10 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-white/10 transition-all duration-300 hover:scale-105 active:scale-95 z-50 overflow-hidden ${
+            chatOpen ? 'opacity-0 pointer-events-none' : ''
           }`}
         >
-          <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_30%_20%,rgba(217,249,157,0.35),transparent_60%)]" />
-          <div className="absolute inset-0 rounded-xl border border-acid opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <svg className="w-5 h-5 group-hover:text-lime-300 transition-colors" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 3C7.03 3 3 6.58 3 11c0 2.18 1.05 4.13 2.75 5.56L5 21l4.62-2.01c.77.21 1.57.32 2.38.32 4.97 0 9-3.58 9-8s-4.03-8-9-8z" />
           </svg>
         </button>

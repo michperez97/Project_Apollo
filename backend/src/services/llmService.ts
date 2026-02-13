@@ -10,6 +10,7 @@ export interface LlmMessage {
 export interface LlmChatOptions {
   temperature?: number;
   maxTokens?: number;
+  timeout?: number;
 }
 
 const provider = (process.env.LLM_PROVIDER ?? 'openai_compatible').toLowerCase();
@@ -59,14 +60,17 @@ export const generateChatCompletion = async (
   }
 
   try {
-    const response = await axios.post(url, payload, { headers, timeout: timeoutMs });
+    const response = await axios.post(url, payload, { headers, timeout: options.timeout ?? timeoutMs });
     const content = response.data?.choices?.[0]?.message?.content;
     if (typeof content === 'string' && content.trim()) {
       return content.trim();
     }
     return null;
   } catch (error) {
-    console.error('LLM request failed:', error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(
+      `[LLM] Request failed (model=${model}, timeout=${options.timeout ?? timeoutMs}ms): ${errMsg}`
+    );
     return null;
   }
 };

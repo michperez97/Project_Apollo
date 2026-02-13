@@ -7,6 +7,8 @@ import { getCourseContent, getCourseProgress, CourseContentResponse } from '../s
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert } from '../components/Alerts';
 import SideNav from '../components/SideNav';
+import AiCourseGeneratorChat from '../components/AiCourseGeneratorChat';
+import { AiCourse, listAiCourses } from '../services/aiCourses';
 
 interface EnrolledCourse {
   enrollment: Enrollment;
@@ -20,9 +22,11 @@ const StudentDashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourse[]>([]);
+  const [aiCourses, setAiCourses] = useState<AiCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState('');
+  const [generatorOpen, setGeneratorOpen] = useState(false);
 
   useEffect(() => {
     const updateTime = () => {
@@ -56,7 +60,10 @@ const StudentDashboardPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const enrollments = await getEnrollments(user.id);
+        const [enrollments, aiCoursesData] = await Promise.all([
+          getEnrollments(user.id),
+          listAiCourses().catch(() => [] as AiCourse[])
+        ]);
         const paidEnrollments = enrollments.filter((e) => e.payment_status === 'paid');
 
         const coursesData = await Promise.all(
@@ -99,8 +106,8 @@ const StudentDashboardPage = () => {
         );
 
         setEnrolledCourses(coursesData);
-      } catch (err) {
-        console.error(err);
+        setAiCourses(aiCoursesData);
+      } catch {
         setError('Failed to load enrolled courses.');
       } finally {
         setLoading(false);
@@ -110,6 +117,20 @@ const StudentDashboardPage = () => {
   }, [user, navigate]);
 
   if (!user) return null;
+
+  const refreshAiCourses = async () => {
+    try {
+      const data = await listAiCourses();
+      setAiCourses(data);
+    } catch {
+      // Silent failure — dashboard will show stale data until next refresh
+    }
+  };
+
+  const handleGeneratorClose = () => {
+    setGeneratorOpen(false);
+    refreshAiCourses();
+  };
 
   const totalLessons = enrolledCourses.reduce((acc, course) => acc + course.totalLessons, 0);
   const completedLessons = enrolledCourses.reduce((acc, course) => acc + course.completedLessons, 0);
@@ -137,6 +158,9 @@ const StudentDashboardPage = () => {
           </div>
 
           <div className="flex items-center gap-3 animate-fade-in-up delay-100 pointer-events-auto">
+            <button className="btn-accent text-sm" onClick={() => setGeneratorOpen(true)}>
+              Generate AI Course
+            </button>
             <Link to="/" className="btn-secondary text-sm hidden md:flex">
               Browse Courses
             </Link>
@@ -279,6 +303,88 @@ const StudentDashboardPage = () => {
                 )}
               </div>
 
+              <div className="space-y-6 animate-fade-in-up delay-300">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-zinc-900 font-bold flex items-center gap-3 text-lg">
+                    <svg className="w-5 h-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2l1.8 5.5H19l-4.5 3.3L16 16l-4-2.7L8 16l1.5-5.2L5 7.5h5.2L12 2z" />
+                    </svg>
+                    AI-Generated Courses
+                  </h2>
+                  <span className="txt-label">{aiCourses.length} total</span>
+                </div>
+
+                {aiCourses.length === 0 ? (
+                  <div className="glass-card p-12 rounded-2xl text-center">
+                    <div className="w-16 h-16 rounded-full bg-zinc-100 text-zinc-500 flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2L4 22h3.5l1.5-4h6l1.5 4H20L12 2zm0 5.5L14 15h-4l2-7.5z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-bold text-zinc-900">No AI courses yet</h3>
+                    <p className="text-sm text-zinc-500 mt-1">
+                      Generate a personalized course in minutes.
+                    </p>
+                    <button className="btn-accent mt-4 inline-flex" onClick={() => setGeneratorOpen(true)}>
+                      Generate AI Course
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                    {aiCourses.map((course) => {
+                      const statusLabel =
+                        course.status === 'ready' ? 'Ready' : course.status === 'failed' ? 'Failed' : 'Generating';
+                      const statusClasses =
+                        course.status === 'ready'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : course.status === 'failed'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-amber-100 text-amber-700';
+
+                      return (
+                        <div key={course.id} className="glass-card p-5 rounded-2xl flex flex-col">
+                          <div className="flex items-center justify-between">
+                            <span className="txt-label">AI Course</span>
+                            <span className={`text-[10px] font-semibold px-2 py-1 rounded-full ${statusClasses}`}>
+                              {statusLabel}
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-bold text-zinc-900 mt-2 line-clamp-1">{course.title}</h3>
+                          <p className="text-sm text-zinc-500 mt-1 line-clamp-2">
+                            {course.description || 'Custom AI-generated curriculum.'}
+                          </p>
+                          <div className="flex items-center gap-3 mt-3 text-xs text-zinc-500 font-mono">
+                            <span>{course.category || 'Custom'}</span>
+                            <span className="w-1 h-1 rounded-full bg-zinc-300" />
+                            <span>
+                              {course.status === 'ready'
+                                ? 'Ready to learn'
+                                : course.status === 'failed'
+                                  ? 'Needs retry'
+                                  : 'Generating'}
+                            </span>
+                          </div>
+                          <div className="mt-4 flex items-center justify-between">
+                            <Link
+                              to={`/ai-course/${course.id}`}
+                              className={`${course.status === 'ready' ? 'btn-primary' : 'btn-secondary'} text-sm`}
+                            >
+                              {course.status === 'ready' ? 'View Course' : 'View Status'}
+                            </Link>
+                            {course.status === 'generating' && (
+                              <span className="text-xs text-zinc-500 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                                Generating
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               <footer className="mt-12 mb-6 border-t border-zinc-200 pt-8 flex flex-col md:flex-row justify-between items-center txt-label animate-fade-in-up delay-400">
                 <p>APOLLO LEARNING HUB <span className="text-zinc-600 font-bold">v2.0</span></p>
                 <div className="flex gap-6 mt-4 md:mt-0">
@@ -291,6 +397,8 @@ const StudentDashboardPage = () => {
           )}
         </div>
       </main>
+
+      <AiCourseGeneratorChat open={generatorOpen} onClose={handleGeneratorClose} />
     </div>
   );
 };

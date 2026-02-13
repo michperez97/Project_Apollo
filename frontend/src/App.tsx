@@ -19,6 +19,7 @@ import ProfilePage from './pages/ProfilePage';
 import InstructorPublicProfile from './pages/InstructorPublicProfile';
 import InstructorPaymentsPage from './pages/InstructorPaymentsPage';
 import InstructorInboxPage from './pages/InstructorInboxPage';
+import AiCoursePlayerPage from './pages/AiCoursePlayerPage';
 
 const App = () => {
   return (
@@ -48,6 +49,14 @@ const App = () => {
         element={
           <ProtectedRoute>
             <CoursePlayerPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ai-course/:courseId"
+        element={
+          <ProtectedRoute>
+            <AiCoursePlayerPage />
           </ProtectedRoute>
         }
       />
