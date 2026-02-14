@@ -130,6 +130,10 @@ export const updateQuiz = async (quizId: number, input: Partial<CreateQuizInput>
     fields.push(`time_limit_minutes = $${paramCount++}`);
     values.push(input.time_limit_minutes);
   }
+  if (input.lesson_id !== undefined) {
+    fields.push(`lesson_id = $${paramCount++}`);
+    values.push(input.lesson_id);
+  }
 
   if (fields.length === 0) return getQuizById(quizId);
 
@@ -201,6 +205,82 @@ export const getAnswersByQuestion = async (questionId: number): Promise<QuizAnsw
 export const deleteQuestion = async (questionId: number): Promise<boolean> => {
   const result = await pool.query('DELETE FROM quiz_questions WHERE id = $1', [questionId]);
   return result.rowCount ? result.rowCount > 0 : false;
+};
+
+export const updateQuestion = async (
+  questionId: number,
+  input: {
+    question_text?: string;
+    question_type?: 'multiple_choice' | 'true_false';
+    position?: number;
+    points?: number;
+    answers?: Array<{ answer_text: string; is_correct: boolean; position: number }>;
+  }
+): Promise<QuizQuestion | null> => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Update question fields
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    if (input.question_text !== undefined) {
+      fields.push(`question_text = $${paramCount++}`);
+      values.push(input.question_text);
+    }
+    if (input.question_type !== undefined) {
+      fields.push(`question_type = $${paramCount++}`);
+      values.push(input.question_type);
+    }
+    if (input.position !== undefined) {
+      fields.push(`position = $${paramCount++}`);
+      values.push(input.position);
+    }
+    if (input.points !== undefined) {
+      fields.push(`points = $${paramCount++}`);
+      values.push(input.points);
+    }
+
+    let question: QuizQuestion | null = null;
+    if (fields.length > 0) {
+      values.push(questionId);
+      const result = await client.query(
+        `UPDATE quiz_questions SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+        values
+      );
+      question = result.rows[0] || null;
+    } else {
+      const result = await client.query('SELECT * FROM quiz_questions WHERE id = $1', [questionId]);
+      question = result.rows[0] || null;
+    }
+
+    if (!question) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    // Replace answers if provided
+    if (input.answers) {
+      await client.query('DELETE FROM quiz_answers WHERE question_id = $1', [questionId]);
+      for (const answer of input.answers) {
+        await client.query(
+          `INSERT INTO quiz_answers (question_id, answer_text, is_correct, position)
+           VALUES ($1, $2, $3, $4)`,
+          [questionId, answer.answer_text, answer.is_correct, answer.position]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    return question;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 // Quiz Attempt operations

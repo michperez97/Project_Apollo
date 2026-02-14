@@ -14,6 +14,7 @@ import StudentDashboardPage from './pages/StudentDashboardPage';
 import QuizPage from './pages/QuizPage';
 import CertificatePage from './pages/CertificatePage';
 import InstructorQuizBuilder from './pages/InstructorQuizBuilder';
+import InstructorQuizDetail from './pages/InstructorQuizDetail';
 import CourseBuilderPage from './pages/CourseBuilderPage';
 import ProfilePage from './pages/ProfilePage';
 import InstructorPublicProfile from './pages/InstructorPublicProfile';
@@ -129,6 +130,14 @@ const App = () => {
         element={
           <ProtectedRoute>
             <InstructorQuizBuilder />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/instructor/courses/:courseId/quizzes/:quizId"
+        element={
+          <ProtectedRoute>
+            <InstructorQuizDetail />
           </ProtectedRoute>
         }
       />

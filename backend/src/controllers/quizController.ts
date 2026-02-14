@@ -91,13 +91,14 @@ export const updateQuiz = async (req: AuthenticatedRequest, res: Response, next:
       return res.status(400).json({ error: 'Invalid quiz ID' });
     }
 
-    const { title, description, passing_score, time_limit_minutes } = req.body;
+    const { title, description, passing_score, time_limit_minutes, lesson_id } = req.body;
 
     const quiz = await quizModel.updateQuiz(quizId, {
       title,
       description,
       passing_score,
-      time_limit_minutes
+      time_limit_minutes,
+      lesson_id
     });
 
     if (!quiz) {
@@ -180,6 +181,45 @@ export const deleteQuestion = async (req: AuthenticatedRequest, res: Response, n
     }
 
     return res.json({ message: 'Question deleted successfully' });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// Update question (instructor/admin only)
+export const updateQuestion = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const questionId = Number(req.params.questionId);
+    if (!Number.isFinite(questionId)) {
+      return res.status(400).json({ error: 'Invalid question ID' });
+    }
+
+    const { question_text, question_type, position, points, answers } = req.body;
+
+    // Validate answers if provided
+    if (answers !== undefined) {
+      if (!Array.isArray(answers)) {
+        return res.status(400).json({ error: 'Answers must be an array' });
+      }
+      const hasCorrectAnswer = answers.some((a: any) => a.is_correct);
+      if (!hasCorrectAnswer) {
+        return res.status(400).json({ error: 'At least one answer must be marked as correct' });
+      }
+    }
+
+    const question = await quizModel.updateQuestion(questionId, {
+      question_text,
+      question_type,
+      position,
+      points,
+      answers
+    });
+
+    if (!question) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+
+    return res.json({ question });
   } catch (error) {
     return next(error);
   }

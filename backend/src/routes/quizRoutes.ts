@@ -6,6 +6,7 @@ import {
   updateQuiz,
   deleteQuiz,
   addQuestion,
+  updateQuestion,
   deleteQuestion,
   startAttempt,
   submitAttempt,
@@ -24,6 +25,7 @@ router.delete('/:id', authenticate, authorizeRoles('admin', 'instructor'), delet
 
 // Question management routes
 router.post('/:id/questions', authenticate, authorizeRoles('admin', 'instructor'), addQuestion);
+router.put('/:id/questions/:questionId', authenticate, authorizeRoles('admin', 'instructor'), updateQuestion);
 router.delete('/:id/questions/:questionId', authenticate, authorizeRoles('admin', 'instructor'), deleteQuestion);
 
 // Student quiz attempt routes
