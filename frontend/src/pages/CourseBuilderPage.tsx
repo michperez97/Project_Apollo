@@ -5,6 +5,7 @@ import { Course } from '../types';
 import { getCourse } from '../services/courses';
 import * as builder from '../services/courseBuilder';
 import { CourseSection, CourseLesson } from '../services/courseBuilder';
+import { getQuizzesByCourse, updateQuiz, Quiz } from '../services/quizzes';
 import { LoadingCard } from '../components/LoadingStates';
 import { Alert } from '../components/Alerts';
 
@@ -56,6 +57,10 @@ const CourseBuilderPage = () => {
   const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
   const [savingLesson, setSavingLesson] = useState(false);
 
+  // Quiz linking
+  const [courseQuizzes, setCourseQuizzes] = useState<Quiz[]>([]);
+  const [selectedQuizId, setSelectedQuizId] = useState<string>('');
+
   // Accordion
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
@@ -74,11 +79,13 @@ const CourseBuilderPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const [courseData, sectionData] = await Promise.all([
+      const [courseData, sectionData, quizzesData] = await Promise.all([
         getCourse(cid),
-        builder.listSections(cid)
+        builder.listSections(cid),
+        getQuizzesByCourse(cid)
       ]);
       setCourse(courseData);
+      setCourseQuizzes(quizzesData);
 
       // Load lessons for each section
       const sectionsWithLessons: SectionWithLessons[] = await Promise.all(
@@ -208,10 +215,17 @@ const CourseBuilderPage = () => {
       }
 
       const lesson = await builder.createLesson(cid, sectionId, payload);
+
+      // Link quiz to lesson if quiz type
+      if (lessonForm.lesson_type === 'quiz' && selectedQuizId) {
+        await updateQuiz(Number(selectedQuizId), { lesson_id: lesson.id });
+      }
+
       setSections(prev => prev.map(s =>
         s.id === sectionId ? { ...s, lessons: [...s.lessons, lesson] } : s
       ));
       setLessonForm(defaultLessonForm);
+      setSelectedQuizId('');
       setActiveLessonSection(null);
       setSuccess('Lesson created');
     } catch {
@@ -239,12 +253,30 @@ const CourseBuilderPage = () => {
       };
 
       const updated = await builder.updateLesson(cid, sectionId, editingLessonId, payload);
+
+      // Link/unlink quiz when editing a quiz-type lesson
+      if (lessonForm.lesson_type === 'quiz') {
+        // Unlink any quiz previously linked to this lesson
+        const previouslyLinked = courseQuizzes.find(q => q.lesson_id === editingLessonId);
+        if (previouslyLinked && previouslyLinked.id !== Number(selectedQuizId)) {
+          await updateQuiz(previouslyLinked.id, { lesson_id: null });
+        }
+        // Link newly selected quiz
+        if (selectedQuizId) {
+          await updateQuiz(Number(selectedQuizId), { lesson_id: editingLessonId });
+        }
+        // Refresh quizzes
+        const refreshedQuizzes = await getQuizzesByCourse(cid);
+        setCourseQuizzes(refreshedQuizzes);
+      }
+
       setSections(prev => prev.map(s =>
         s.id === sectionId
           ? { ...s, lessons: s.lessons.map(l => l.id === updated.id ? updated : l) }
           : s
       ));
       setLessonForm(defaultLessonForm);
+      setSelectedQuizId('');
       setEditingLessonId(null);
       setActiveLessonSection(null);
       setSuccess('Lesson updated');
@@ -300,12 +332,20 @@ const CourseBuilderPage = () => {
       content: lesson.content || '',
       is_preview: lesson.is_preview
     });
+    // Populate quiz picker if editing a quiz-type lesson
+    if (lesson.lesson_type === 'quiz') {
+      const linkedQuiz = courseQuizzes.find(q => q.lesson_id === lesson.id);
+      setSelectedQuizId(linkedQuiz ? String(linkedQuiz.id) : '');
+    } else {
+      setSelectedQuizId('');
+    }
   };
 
   const cancelLessonForm = () => {
     setActiveLessonSection(null);
     setEditingLessonId(null);
     setLessonForm(defaultLessonForm);
+    setSelectedQuizId('');
   };
 
   const lessonTypeLabel = (type: string) => {
@@ -643,6 +683,36 @@ const CourseBuilderPage = () => {
                                 className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
                                 placeholder='{"scorm_package_id": 12, "launch_path": "index_lms.html"}'
                               />
+                            </div>
+                          )}
+                          {lessonForm.lesson_type === 'quiz' && (
+                            <div>
+                              <label className="block txt-label mb-1">LINK QUIZ</label>
+                              {courseQuizzes.length === 0 ? (
+                                <p className="text-sm text-zinc-500">
+                                  No quizzes yet.{' '}
+                                  <Link
+                                    to={`/instructor/courses/${courseId}/quizzes`}
+                                    className="text-blue-600 hover:text-blue-800 underline"
+                                  >
+                                    Go to Quiz Builder
+                                  </Link>
+                                </p>
+                              ) : (
+                                <select
+                                  value={selectedQuizId}
+                                  onChange={(e) => setSelectedQuizId(e.target.value)}
+                                  className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                                >
+                                  <option value="">-- Select a quiz --</option>
+                                  {courseQuizzes.map((q) => (
+                                    <option key={q.id} value={q.id}>
+                                      {q.title}
+                                      {q.lesson_id && q.lesson_id !== editingLessonId ? ' (linked to another lesson)' : ''}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
                             </div>
                           )}
                           <div className="flex gap-2">

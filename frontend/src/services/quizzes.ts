@@ -98,6 +98,25 @@ export const addQuestion = async (
   return data.question;
 };
 
+// Update question (instructor/admin)
+export const updateQuestion = async (
+  quizId: number,
+  questionId: number,
+  questionData: {
+    question_text?: string;
+    question_type?: 'multiple_choice' | 'true_false';
+    position?: number;
+    points?: number;
+    answers?: Array<{ answer_text: string; is_correct: boolean; position: number }>;
+  }
+): Promise<QuizQuestion> => {
+  const { data } = await api.put<{ question: QuizQuestion }>(
+    `/quizzes/${quizId}/questions/${questionId}`,
+    questionData
+  );
+  return data.question;
+};
+
 // Delete question (instructor/admin)
 export const deleteQuestion = async (quizId: number, questionId: number): Promise<void> => {
   await api.delete(`/quizzes/${quizId}/questions/${questionId}`);

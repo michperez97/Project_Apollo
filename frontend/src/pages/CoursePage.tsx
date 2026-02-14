@@ -50,6 +50,7 @@ const CoursePage = () => {
     module_id: ''
   });
   const [savingAssignment, setSavingAssignment] = useState(false);
+  const [editingAssignmentId, setEditingAssignmentId] = useState<number | null>(null);
   const [submissionDrafts, setSubmissionDrafts] = useState<
     Record<number, { content_url: string; content_text: string }>
   >({});
@@ -206,6 +207,44 @@ const CoursePage = () => {
     } catch (err) {
 
       setError('Could not create assignment.');
+    } finally {
+      setSavingAssignment(false);
+    }
+  };
+
+  const startEditAssignment = (assignment: Assignment) => {
+    setEditingAssignmentId(assignment.id);
+    setAssignmentForm({
+      title: assignment.title,
+      description: assignment.description || '',
+      due_at: assignment.due_at ? assignment.due_at.split('T')[0] : '',
+      points: assignment.points,
+      module_id: assignment.module_id ? String(assignment.module_id) : ''
+    });
+  };
+
+  const cancelEditAssignment = () => {
+    setEditingAssignmentId(null);
+    setAssignmentForm({ title: '', description: '', due_at: '', points: 100, module_id: '' });
+  };
+
+  const handleUpdateAssignment = async () => {
+    if (!editingAssignmentId || !assignmentForm.title.trim()) return;
+    setSavingAssignment(true);
+    setError(null);
+    try {
+      await assignmentApi.updateAssignment(editingAssignmentId, {
+        title: assignmentForm.title,
+        description: assignmentForm.description,
+        due_at: assignmentForm.due_at || null,
+        points: Number(assignmentForm.points) || 0,
+        module_id: assignmentForm.module_id ? Number(assignmentForm.module_id) : null
+      });
+      setEditingAssignmentId(null);
+      setAssignmentForm({ title: '', description: '', due_at: '', points: 100, module_id: '' });
+      await refreshAssignments();
+    } catch (err) {
+      setError('Could not update assignment.');
     } finally {
       setSavingAssignment(false);
     }
@@ -551,13 +590,22 @@ const CoursePage = () => {
                 >
                   Download CSV
                 </button>
+                {editingAssignmentId && (
+                  <button
+                    className="btn-secondary"
+                    type="button"
+                    onClick={cancelEditAssignment}
+                  >
+                    Cancel
+                  </button>
+                )}
                 <button
                   className="btn-primary"
-                  onClick={handleCreateAssignment}
+                  onClick={editingAssignmentId ? handleUpdateAssignment : handleCreateAssignment}
                   disabled={savingAssignment}
                   type="button"
                 >
-                  {savingAssignment ? 'Saving...' : 'Create'}
+                  {savingAssignment ? 'Saving...' : editingAssignmentId ? 'Update' : 'Create'}
                 </button>
               </div>
             )}
@@ -635,12 +683,20 @@ const CoursePage = () => {
                       <p className="text-xs text-gray-500">Points: {assignment.points}</p>
                     </div>
                     {canManage && (
-                      <button
-                        className="text-sm text-red-600 hover:text-red-700"
-                        onClick={() => handleDeleteAssignment(assignment.id)}
-                      >
-                        Delete
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="text-sm text-blue-600 hover:text-blue-700"
+                          onClick={() => startEditAssignment(assignment)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="text-sm text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteAssignment(assignment.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     )}
                   </div>
 
