@@ -21,8 +21,9 @@ Pivot in progress. Marketplace foundations, moderation, and student learning flo
 - Legacy LMS cleanup
 
 ## Documents
-- `Project Documents /Apollo_SRS_v1.0.docx` (note: directory name includes a trailing space)
+- `Project Documents /Apollo_SRS_v2.4.docx` (note: directory name includes a trailing space)
 - `Project Documents /Apollo_SDS_v1.0.docx` (note: directory name includes a trailing space)
+  - Both SRS and SDS can change throughout the window of January 6 - April 23 
 
 ## Tech Stack
 - **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS
